@@ -1,0 +1,91 @@
+name: Build PWA Signed APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Signed Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js v22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Install Node.js Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npm run build
+
+      - name: Start Local Web Server
+        run: |
+          npm install -g http-server
+          http-server dist -p 12345 &
+          echo "Waiting for local web server to start..."
+          sleep 5
+
+      - name: Generate Custom Keystore for Signing
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "cn=Einundzwanzig, ou=Pool, o=Einundzwanzig, c=DE"
+
+      - name: Prepare Bubblewrap CLI Configuration
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat <<EOF > ~/.bubblewrap/config.json
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "${ANDROID_HOME}"
+          }
+          EOF
+          echo "Bubblewrap paths configured."
+
+      - name: Patch twa-manifest.json for Local Build
+        run: |
+          # Redirect twa-manifest targets to our local web server to ensure offline-compatible non-interactive build
+          sed -i 's|https://einundzwanzig-pool-tg.vercel.app/manifest.json|http://localhost:12345/manifest.json|g' twa-manifest.json
+          sed -i 's|https://einundzwanzig-pool-tg.vercel.app/bitcoin-logo-512.png|http://localhost:12345/bitcoin-logo-512.png|g' twa-manifest.json
+          echo "twa-manifest.json patched successfully."
+
+      - name: Run Bubblewrap Build
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: android
+          BUBBLEWRAP_KEY_PASSWORD: android
+        run: |
+          npx @google-labs/bubblewrap build
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Signed-Android-APK
+          path: ./*.apk
+
+      - name: Upload AAB (Android App Bundle) Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Signed-Android-AAB
+          path: ./*.aab
