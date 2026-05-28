@@ -1,4 +1,4 @@
-name: Build Android APK (PWA)
+name: Build Android APK
 
 on:
   push:
@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main", "master" ]
   workflow_dispatch:
+
+env:
+  # Supress Node.js 20 deprecation warnings by forcing Node.js 24 execution on modern runners
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # Job 1: Build PWA Static Assets (Vite)
@@ -16,10 +20,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js v20
+      - name: Setup Node.js v24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Install Dependencies
@@ -34,34 +38,9 @@ jobs:
           name: pwa-dist-assets
           path: dist/
 
-  # Job 2: Microsoft PWABuilder Cloud Packaging (Recommended & Simplest)
-  # Generates fully signed production .apk & .aab directly using the web manifest.
-  pwabuilder-compiler:
-    name: Microsoft PWABuilder APK
-    needs: build-pwa
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
-
-      - name: Compile APK via PWABuilder Action
-        uses: pwa-builder/pwa-action@v1
-        continue-on-error: true
-        with:
-          pwa-url: "https://einundzwanzig-pool.de" # Replace with your live URL when deployed
-          android-package-id: "de.einundzwanzig.pool"
-          android-app-name: "EINUNDZWANZIG POOL"
-          android-launcher-name: "EINUNDZWANZIG POOL"
-
-      - name: Upload PWABuilder Output Packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk-pwabuilder
-          path: ./*
-
-  # Job 3: Local Offline Bubblewrap Compilation (Compiles directly on the GitHub runner)
+  # Job 2: Local Offline Bubblewrap Compilation (Compiles directly on the GitHub runner)
   local-bubblewrap-compiler:
-    name: Local Offline Bubblewrap APK
+    name: Build Signed Android APK
     needs: build-pwa
     runs-on: ubuntu-latest
     steps:
@@ -125,15 +104,18 @@ jobs:
 
       - name: Initialize and Validate Bubblewrap Project
         run: |
-          bubblewrap init --manifest=twa-manifest.json --directory=./android-project --skipValidation
+          mkdir -p ./android-project
+          cp android.keystore ./android-project/android.keystore
+          yes "" | bubblewrap init --manifest=twa-manifest.json --directory=./android-project --skipValidation
 
       - name: Build Signed Android APK & AAB
         working-directory: ./android-project
         run: |
-          bubblewrap build --signingKeyPath=../android.keystore --signingKeyPassword=password123 --signingKeyAlias=android-key --signingKeyAliasPassword=password123
+          yes "" | bubblewrap build --signingKeyPath=./android.keystore --signingKeyPassword=password123 --signingKeyAlias=android-key --signingKeyAliasPassword=password123
 
       - name: Upload Locally Compiled APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-local-bubblewrap
           path: ./android-project/app-release-signed.apk
+
