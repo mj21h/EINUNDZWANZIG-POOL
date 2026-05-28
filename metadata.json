@@ -1,0 +1,6 @@
+{
+  "name": "Einundzwanzig Pool",
+  "description": "Fokus-Plattform für Bitcoin-Marktanalysen, interaktive Indikatoren und nützliche Einsteiger-Ressourcen.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

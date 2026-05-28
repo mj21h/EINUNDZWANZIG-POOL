@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@200;300;400;500;600;700;800;900&family=Archivo+Black&family=League+Spartan:wght@900&display=swap');
+@import url('https://fonts.cdnfonts.com/css/the-bold-font');
+@import "tailwindcss";
+
+@theme {
+  --font-logo: "The Bold Font", "Archivo Black", "League Spartan", "Arial Black", sans-serif;
+  --font-headline: "Inconsolata", sans-serif;
+  --font-body: "Inconsolata", sans-serif;
+  --font-mono: "Inconsolata", monospace;
+
+  --color-background: #151515;
+  --color-surface: #151515;
+  --color-surface-container-low: #1a1a1a;
+  --color-surface-container: #212121;
+  --color-surface-container-high: #292929;
+  --color-surface-container-highest: #363636;
+  --color-surface-variant: #363636;
+  
+  --color-primary: #F7931A;
+  --color-primary-container: #23180D;
+  --color-on-primary-container: #F7931A;
+  
+  --color-secondary: #F7931A;
+  --color-secondary-container: #23180D;
+  
+  --color-tertiary: #F7931A;
+  --color-tertiary-container: #23180D;
+  
+  --color-teal: #F7931A;
+  --color-purple: #F7931A;
+  
+  --color-on-surface: #e2e2e5;
+  --color-on-surface-variant: #F7931A;
+  
+  --color-outline-variant: #3b3b3b;
+  --color-error: #ffb4ab;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface font-body antialiased;
+  }
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
