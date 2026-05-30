@@ -55,7 +55,7 @@ jobs:
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_HOME}"
+            "androidSdkPath": "/usr/local/lib/android/sdk"
           }
           EOF
           echo "Bubblewrap paths configured."
@@ -74,14 +74,25 @@ jobs:
           echo "twa-manifest.json patched successfully."
 
       - name: Run Bubblewrap Build
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: android
-          BUBBLEWRAP_KEY_PASSWORD: android
         run: |
           # Generate Android project files directly from the patched twa-manifest
           npx @bubblewrap/cli update --skipVersionUpgrade
-          # Build the APK / AAB
-          npx @bubblewrap/cli build
+          
+      - name: Build and Sign APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner not found!"
+            exit 1
+          fi
+          $APKSIGNER sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out app-release-signed.apk app/build/outputs/apk/release/app-release-unsigned.apk
+
+      - name: Build and Sign AAB
+        run: |
+          ./gradlew bundleRelease
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore debug.keystore -storepass android -keypass android app/build/outputs/bundle/release/app-release.aab androiddebugkey
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -93,4 +104,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Signed-Android-AAB
-          path: ./*.aab
+          path: app/build/outputs/bundle/release/app-release.aab
