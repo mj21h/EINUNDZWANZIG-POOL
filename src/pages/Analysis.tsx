@@ -11,37 +11,37 @@ interface Indicator {
 const indicators: Indicator[] = [
   {
     name: "Long-Term Holder Realized Price",
-    desc: "Durchschnittlicher Einstandspreis der Langzeit-Investoren (>155 Tage). Feb-Tief ($60.062, 06.02.) berührte die Kostenbasis und hielt – BTC notiert nun bei ~$79K. LTH-Supply steigt am aktuellen Rand deutlich; Exchange-Abflüsse 41.000 BTC in 30 Tagen (~$3,5 Mrd.).",
+    desc: "Dieser Indikator zeigt den durchschnittlichen Einstandspreis von Anlegern, die ihre Bitcoins ununterbrochen für einen längeren Zeitraum halten.",
     url: "https://www.bitcoinmagazinepro.com/charts/long-term-holder-realized-price/",
     icon: <Shield size={18} className="text-teal flex-shrink-0" />
   },
   {
     name: "Short-Term Holder MVRV",
-    desc: "Vergleicht den aktuellen Bitcoin-Preis mit dem durchschnittlichen Einstandspreis von Kurzzeit-Investoren (<155 Tage). BTC notiert nach der jüngsten Aufwärtsbewegung über dieser durchschnittlichen Kostenbasis, während das rückläufige Handelsvolumen und die Coinbase Premium auf eine ausgeglichene Marktstimmung hinweisen.",
+    desc: "Dieser Indikator bewertet die Profitabilität von kurzfristigen Marktteilnehmern, indem er den aktuellen Bitcoin-Preis mit deren durchschnittlichen Anschaffungskosten vergleicht.",
     url: "https://charts.checkonchain.com/btconchain/unrealised/sthmvrv_indicator/sthmvrv_indicator_light.html",
     icon: <Timer size={18} className="text-teal flex-shrink-0" />
   },
   {
     name: "Bitcoin Power Law",
-    desc: "Zeigt langfristig, wie der BTC-Preis mit der Zeit wächst. BTC bei ~$79K bewegt sich an der Obergrenze der Power-Law-Akkumulationszone (~$65K–$80K). Historisch attraktiv, aber nicht mehr so tief wie beim Feb-Tief – Hauptkapital zurückhalten.",
+    desc: "Dieses mathematische Modell veranschaulicht den langfristigen, nichtlinearen Wachstumstrend des Bitcoin-Preises im zeitlichen Verlauf.",
     url: "https://www.bitcoinmagazinepro.com/charts/bitcoin-power-law/",
     icon: <LineChart size={18} className="text-teal flex-shrink-0" />
   },
   {
     name: "200-Wochen Moving Average",
-    desc: "Durchschnittlicher BTC-Preis der letzten 200 Wochen (~4 Jahre). 200-WMA aktuell bei ~$51.747. BTC notiert bei ~$79K – ~53 % darüber. Das Feb-Tief ($60K) hielt deutlich oberhalb der Kostenbasis, was eine intakte langfristige Bodenbildung anzeigt.",
+    desc: "Dieser Indikator berechnet den gleitenden Durchschnitt des Bitcoin-Preises über die letzten 200 Wochen und dient als bewährtes Maß für den langfristigen Markttrend.",
     url: "https://www.bitcoinmagazinepro.com/charts/200-week-moving-average-heatmap/",
     icon: <Calendar size={18} className="text-teal flex-shrink-0" />
   },
   {
     name: "NUPL (Net Unrealized Profit/Loss)",
-    desc: "Misst das Verhältnis der nicht realisierten Marktwerte aller umlaufenden Bitcoins. Der Indikator verbleibt historisch in einer gesunden Zone des Marktaufbaus, was auf eine stabile Konsolidierung ohne übermäßige Hitze hindeutet.",
+    desc: "Dieser Indikator misst die Summe der nicht realisierten Gewinne und Verluste aller umlaufenden Einheiten, um die psychologische Marktphase des gesamten Bitcoin-Netzwerks zu bestimmen.",
     url: "https://www.bitcoinmagazinepro.com/charts/relative-unrealized-profit--loss/",
     icon: <TrendingUp size={18} className="text-teal flex-shrink-0" />
   },
   {
     name: "Bitcoin Root-Scale Cycle Chart",
-    desc: "Zeigt den BTC-Preis langfristig auf einer Wurzel-Skala mit mathematischem Fokus; der RSI verbleibt in einer historisch aussichtsreichen Zone mit Potenzial nach oben. Allokationen sollten den langfristigen Zyklus berücksichtigen.",
+    desc: "Dieses Chart-Modell stellt die historische Preisentwicklung auf einer mathematischen Wurzelskala dar, um das zyklische Kauf- und Verkaufsinteresse über mehrere Halving-Epochen hinweg zu veranschaulichen.",
     url: "https://bitcoinwave.net/#RootChart",
     icon: <Activity size={18} className="text-teal flex-shrink-0" />
   }

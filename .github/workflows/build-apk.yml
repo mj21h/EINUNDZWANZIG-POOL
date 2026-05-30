@@ -79,7 +79,10 @@ jobs:
           BUBBLEWRAP_KEYSTORE_PASSWORD: android
           BUBBLEWRAP_KEY_PASSWORD: android
         run: |
-          npx @bubblewrap/cli init --twaManifest=twa-manifest.json --yes
+          cp twa-manifest.json twa-manifest.json.custom
+          npx @bubblewrap/cli init --manifest=http://localhost:12345/manifest.json --yes
+          cp twa-manifest.json.custom twa-manifest.json
+          npx @bubblewrap/cli update --yes
           npx @bubblewrap/cli build --yes
 
       - name: Upload APK Artifact
