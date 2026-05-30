@@ -1,6 +1,6 @@
 {
   "packageId": "de.einundzwanzig.pool",
-  "host": "einundzwanzig.space",
+  "host": "einundzwanzig-pool-tg.vercel.app",
   "name": "Einundzwanzig Pool",
   "launcherName": "Pool",
   "display": "standalone",
@@ -33,7 +33,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://einundzwanzig.space/",
+  "fullScopeUrl": "https://einundzwanzig-pool-tg.vercel.app/",
   "minSdkVersion": 21,
   "orientation": "default",
   "fingerprints": [],
