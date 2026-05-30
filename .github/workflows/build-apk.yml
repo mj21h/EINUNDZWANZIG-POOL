@@ -37,13 +37,6 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
-      - name: Start Local Web Server
-        run: |
-          npm install -g http-server
-          http-server dist -p 12345 &
-          echo "Waiting for local web server to start..."
-          sleep 5
-
       - name: Generate Custom Keystore for Signing
         run: |
           keytool -genkeypair -v \
@@ -67,22 +60,12 @@ jobs:
           EOF
           echo "Bubblewrap paths configured."
 
-      - name: Patch twa-manifest.json for Local Build
-        run: |
-          # Redirect twa-manifest targets to our local web server to ensure offline-compatible non-interactive build
-          sed -i 's|https://einundzwanzig-pool-tg.vercel.app/manifest.json|http://localhost:12345/manifest.json|g' twa-manifest.json
-          sed -i 's|https://einundzwanzig-pool-tg.vercel.app/bitcoin-logo-512.png|http://localhost:12345/bitcoin-logo-512.png|g' twa-manifest.json
-          echo "twa-manifest.json patched successfully."
-
       - name: Run Bubblewrap Build
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: android
           BUBBLEWRAP_KEY_PASSWORD: android
         run: |
-          cp twa-manifest.json twa-manifest.json.custom
-          yes "" | npx @bubblewrap/cli init --manifest=http://localhost:12345/manifest.json --yes
-          cp twa-manifest.json.custom twa-manifest.json
-          npx @bubblewrap/cli update --yes
+          npx @bubblewrap/cli init --twaManifest=twa-manifest.json --yes
           npx @bubblewrap/cli build --yes
 
       - name: Upload APK Artifact
