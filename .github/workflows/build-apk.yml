@@ -62,7 +62,7 @@ jobs:
 
       - name: Start Local Web Server
         run: |
-          node serve-dist.js &
+          node serve-dist.cjs &
           echo "Waiting for local web server to start..."
           sleep 3
 
