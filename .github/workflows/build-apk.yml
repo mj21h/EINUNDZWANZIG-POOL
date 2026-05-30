@@ -68,8 +68,6 @@ jobs:
 
       - name: Patch twa-manifest.json for Local Build
         run: |
-          # Backup our original custom twa-manifest.json
-          cp twa-manifest.json twa-manifest.json.custom
           # Redirect twa-manifest targets to our local web server to ensure offline-compatible non-interactive build
           sed -i 's|https://einundzwanzig-pool-tg.vercel.app/manifest.json|http://localhost:12345/manifest.json|g' twa-manifest.json
           sed -i 's|https://einundzwanzig-pool-tg.vercel.app/bitcoin-logo-512.png|http://localhost:12345/bitcoin-logo-512.png|g' twa-manifest.json
@@ -80,14 +78,10 @@ jobs:
           BUBBLEWRAP_KEYSTORE_PASSWORD: android
           BUBBLEWRAP_KEY_PASSWORD: android
         run: |
-          # Bootstrap Android project files non-interactively using the local manifest url
-          yes "" | npx @bubblewrap/cli init --manifest=http://localhost:12345/manifest.json --yes
-          # Restore the preconfigured twa-manifest config files
-          cp twa-manifest.json.custom twa-manifest.json
-          # Propagate the customized parameters to the generated Android project files
-          npx @bubblewrap/cli update --yes
+          # Generate Android project files directly from the patched twa-manifest
+          npx @bubblewrap/cli update --skipVersionUpgrade
           # Build the APK / AAB
-          npx @bubblewrap/cli build --yes
+          npx @bubblewrap/cli build
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
