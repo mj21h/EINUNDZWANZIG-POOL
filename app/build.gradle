@@ -22,7 +22,7 @@ plugins {
 
 def twaManifest = [
     applicationId: 'de.einundzwanzig.pool',
-    hostName: 'einundzwanzig-pool-tg.vercel.app', // The domain being opened in the TWA.
+    hostName: 'ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app', // The domain being opened in the TWA.
     launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
     name: 'Einundzwanzig Pool', // The application name.
     launcherName: 'Pool', // The name shown on the Android Launcher.
@@ -81,7 +81,7 @@ android {
 
         
             // This is used by Meta Quest.
-            resValue "string", "fullScopeUrl", 'https://einundzwanzig-pool-tg.vercel.app/'
+            resValue "string", "fullScopeUrl", 'https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/'
         
 
         

@@ -34,7 +34,7 @@
         \"relation\": [\"delegate_permission/common.handle_all_urls\"],
         \"target\": {
             \"namespace\": \"web\",
-            \"site\": \"https://einundzwanzig-pool-tg.vercel.app\"
+            \"site\": \"https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app\"
         }
     }]
     

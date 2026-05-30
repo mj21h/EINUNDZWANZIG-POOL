@@ -19,8 +19,12 @@ const server = http.createServer((req, res) => {
   const filePath = path.join(process.cwd(), 'dist', safePath);
   
   if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    const stat = fs.statSync(filePath);
     const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
+    res.writeHead(200, { 
+      'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
+      'Content-Length': stat.size
+    });
     fs.createReadStream(filePath).pipe(res);
   } else {
     res.writeHead(404, { 'Content-Type': 'text/plain' });

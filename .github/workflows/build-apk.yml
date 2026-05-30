@@ -69,8 +69,8 @@ jobs:
       - name: Patch twa-manifest.json for Local Build
         run: |
           # Redirect twa-manifest targets to our local web server to ensure offline-compatible non-interactive build
-          sed -i 's|https://einundzwanzig-pool-tg.vercel.app/manifest.json|http://localhost:12345/manifest.json|g' twa-manifest.json
-          sed -i 's|https://einundzwanzig-pool-tg.vercel.app/bitcoin-logo-512.png|http://localhost:12345/bitcoin-logo-512.png|g' twa-manifest.json
+          sed -i 's|https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/manifest.json|http://localhost:12345/manifest.json|g' twa-manifest.json
+          sed -i 's|https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/bitcoin-logo-512.png|http://localhost:12345/bitcoin-logo-512.png|g' twa-manifest.json
           echo "twa-manifest.json patched successfully."
 
       - name: Run Bubblewrap Build

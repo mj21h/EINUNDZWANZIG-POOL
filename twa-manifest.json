@@ -1,6 +1,6 @@
 {
   "packageId": "de.einundzwanzig.pool",
-  "host": "einundzwanzig-pool-tg.vercel.app",
+  "host": "ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app",
   "name": "Einundzwanzig Pool",
   "launcherName": "Pool",
   "display": "standalone",
@@ -13,8 +13,8 @@
   "backgroundColor": "#0b0c0e",
   "enableNotifications": false,
   "startUrl": "/",
-  "iconUrl": "https://einundzwanzig-pool-tg.vercel.app/bitcoin-logo-512.png",
-  "maskableIconUrl": "https://einundzwanzig-pool-tg.vercel.app/bitcoin-logo-512.png",
+  "iconUrl": "https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/bitcoin-logo-512.png",
+  "maskableIconUrl": "https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/bitcoin-logo-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./debug.keystore",
@@ -24,7 +24,7 @@
   "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://einundzwanzig-pool-tg.vercel.app/manifest.json",
+  "webManifestUrl": "https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/manifest.json",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
@@ -33,7 +33,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://einundzwanzig-pool-tg.vercel.app/",
+  "fullScopeUrl": "https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/",
   "minSdkVersion": 21,
   "orientation": "default",
   "fingerprints": [],

@@ -11,12 +11,6 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/bitcoin-logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
       "src": "/bitcoin-logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
