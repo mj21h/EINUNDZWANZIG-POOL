@@ -117,15 +117,39 @@ export default function News() {
     }
     setError(null);
     try {
-      const response = await fetch('/api/news');
+      // Direct client-side fetch via rss2json
+      const rssUrl = encodeURIComponent("https://www.blocktrainer.de/feed/");
+      const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
+      
       if (!response.ok) {
         throw new Error(`Fehler beim Laden (${response.status})`);
       }
       const data = await response.json();
-      if (data.success && Array.isArray(data.items)) {
-        setItems(data.items);
+      
+      if (data && data.status === "ok" && Array.isArray(data.items)) {
+        const parsedItems = data.items.slice(0, 5).map((item: any, idx: number) => {
+          let parsedDesc = (item.description || item.content || "").replace(/<\/?[^>]+(>|$)/g, "").trim();
+          if (parsedDesc.length > 200) parsedDesc = parsedDesc.substring(0, 197) + "...";
+          
+          let imageUrl = item.thumbnail || "";
+          if (!imageUrl && item.enclosure && item.enclosure.link) imageUrl = item.enclosure.link;
+          const fallbackImages = [
+            "https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=800",
+            "https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=800"
+          ];
+          
+          return {
+            id: String(idx),
+            title: item.title,
+            link: item.link,
+            pubDate: item.pubDate,
+            description: parsedDesc,
+            imageUrl: imageUrl || fallbackImages[idx % fallbackImages.length]
+          };
+        });
+        setItems(parsedItems);
       } else {
-        throw new Error(data.error || 'Ungültiges Datenformat erhalten');
+        throw new Error('Ungültiges Datenformat erhalten');
       }
     } catch (err: any) {
       console.error(err);

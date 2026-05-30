@@ -1,4 +1,4 @@
-name: Build PWA Signed APK
+name: Build Offline Standalone APK
 
 on:
   push:
@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE22: 'true'
 
 jobs:
   build-apk:
-    name: Build Signed Android APK
+    name: Build Capacitor Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +37,11 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
+      - name: Generate Capacitor Project
+        run: |
+          npx cap add android
+          npx cap copy android
+
       - name: Generate Custom Keystore for Signing
         run: |
           keytool -genkeypair -v \
@@ -48,60 +53,49 @@ jobs:
             -storepass android \
             -keypass android \
             -dname "cn=Einundzwanzig, ou=Pool, o=Einundzwanzig, c=DE"
+          cp debug.keystore android/app/debug.keystore
 
-      - name: Prepare Bubblewrap CLI Configuration
+      - name: Configure Gradle Signing
         run: |
-          mkdir -p ~/.bubblewrap
-          cat <<EOF > ~/.bubblewrap/config.json
-          {
-            "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
+          cat <<EOF >> android/app/build.gradle
+          
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
           }
           EOF
-          echo "Bubblewrap paths configured."
 
-      - name: Start Local Web Server
-        run: |
-          node serve-dist.cjs &
-          echo "Waiting for local web server to start..."
-          sleep 3
-
-      - name: Patch twa-manifest.json for Local Build
-        run: |
-          # Redirect twa-manifest targets to our local web server to ensure offline-compatible non-interactive build
-          sed -i 's|https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/manifest.json|http://localhost:12345/manifest.json|g' twa-manifest.json
-          sed -i 's|https://ais-pre-evuc3pra63felfjkdeui6f-168332579315.europe-west2.run.app/bitcoin-logo-512.png|http://localhost:12345/bitcoin-logo-512.png|g' twa-manifest.json
-          echo "twa-manifest.json patched successfully."
-
-      - name: Run Bubblewrap Build
-        run: |
-          # Generate Android project files directly from the patched twa-manifest
-          npx @bubblewrap/cli update --skipVersionUpgrade
-          
       - name: Build and Sign APK
         run: |
+          cd android
           chmod +x ./gradlew
           ./gradlew assembleRelease
-          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -r | head -n 1)
-          if [ -z "$APKSIGNER" ]; then
-            echo "apksigner not found!"
-            exit 1
-          fi
-          $APKSIGNER sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android --out app-release-signed.apk app/build/outputs/apk/release/app-release-unsigned.apk
 
       - name: Build and Sign AAB
         run: |
+          cd android
           ./gradlew bundleRelease
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore debug.keystore -storepass android -keypass android app/build/outputs/bundle/release/app-release.aab androiddebugkey
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Signed-Android-APK
-          path: ./*.apk
+          name: Standalone-Android-APK
+          path: android/app/build/outputs/apk/release/*.apk
 
       - name: Upload AAB (Android App Bundle) Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Signed-Android-AAB
-          path: app/build/outputs/bundle/release/app-release.aab
+          name: Standalone-Android-AAB
+          path: android/app/build/outputs/bundle/release/*.aab
+
