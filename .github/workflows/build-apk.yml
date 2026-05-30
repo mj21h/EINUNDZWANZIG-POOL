@@ -80,7 +80,7 @@ jobs:
           BUBBLEWRAP_KEY_PASSWORD: android
         run: |
           cp twa-manifest.json twa-manifest.json.custom
-          npx @bubblewrap/cli init --manifest=http://localhost:12345/manifest.json --yes
+          npx @bubblewrap/cli init --manifest=https://einundzwanzig-pool-tg.vercel.app/manifest.json --yes
           cp twa-manifest.json.custom twa-manifest.json
           npx @bubblewrap/cli update --yes
           npx @bubblewrap/cli build --yes
