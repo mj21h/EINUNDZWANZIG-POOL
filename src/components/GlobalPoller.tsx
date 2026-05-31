@@ -4,14 +4,63 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 
 // Helper to parse price string
-const parseNumericPrice = (p: string) => {
-  return parseFloat(p.replace(/[^0-9.]/g, '')) || 0;
+const parseNumericPrice = (priceStr: string): number => {
+  try {
+    if (priceStr.includes('%')) {
+      return parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+    }
+    
+    let clean = priceStr.trim();
+    clean = clean.replace(/[^0-9.,]/g, '');
+    if (!clean) return 0;
+    
+    if (clean.includes('.') && clean.includes(',')) {
+      if (clean.lastIndexOf('.') > clean.lastIndexOf(',')) {
+        clean = clean.replace(/,/g, '');
+      } else {
+        clean = clean.replace(/\./g, '').replace(/,/g, '.');
+      }
+      return parseFloat(clean);
+    }
+    
+    if (clean.includes('.')) {
+      const parts = clean.split('.');
+      if (parts[parts.length - 1].length === 3) {
+        return parseFloat(clean.replace(/\./g, ''));
+      }
+      return parseFloat(clean);
+    }
+    
+    if (clean.includes(',')) {
+      const parts = clean.split(',');
+      if (parts[parts.length - 1].length === 3) {
+        return parseFloat(clean.replace(/,/g, ''));
+      }
+      return parseFloat(clean.replace(/,/g, '.'));
+    }
+    
+    return parseFloat(clean) || 0;
+  } catch (e) {
+    return 0;
+  }
 };
 
 export default function GlobalPoller() {
   const prevUsdPriceRef = useRef(0);
   const prevEurPriceRef = useRef(0);
   const lastNewsLinkRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Initialize refs from localStorage
+    const savedUsd = localStorage.getItem('einundzwanzig_prev_usd');
+    if (savedUsd) prevUsdPriceRef.current = parseFloat(savedUsd) || 0;
+    
+    const savedEur = localStorage.getItem('einundzwanzig_prev_eur');
+    if (savedEur) prevEurPriceRef.current = parseFloat(savedEur) || 0;
+
+    const savedNews = localStorage.getItem('einundzwanzig_last_news');
+    if (savedNews) lastNewsLinkRef.current = savedNews;
+  }, []);
 
   // Poll for Prices & Triggers
   useEffect(() => {
@@ -43,7 +92,12 @@ export default function GlobalPoller() {
           let triggersToKeep = [];
 
           for (const trig of triggers) {
-            if (!trig.active) {
+            if (!trig.active && trig.status !== "MONITORING" && trig.status !== "PERSISTENT" && trig.status !== "RECURRING") {
+              triggersToKeep.push(trig);
+              continue;
+            }
+
+            if (trig.price.includes('%')) {
               triggersToKeep.push(trig);
               continue;
             }
@@ -110,8 +164,14 @@ export default function GlobalPoller() {
           }
         }
 
-        if (fetchedUsd > 0) prevUsdPriceRef.current = fetchedUsd;
-        if (fetchedEur > 0) prevEurPriceRef.current = fetchedEur;
+        if (fetchedUsd > 0) {
+          prevUsdPriceRef.current = fetchedUsd;
+          localStorage.setItem('einundzwanzig_prev_usd', fetchedUsd.toString());
+        }
+        if (fetchedEur > 0) {
+          prevEurPriceRef.current = fetchedEur;
+          localStorage.setItem('einundzwanzig_prev_eur', fetchedEur.toString());
+        }
 
         // Emit prices
         window.dispatchEvent(new CustomEvent('coinbase_prices_updated', {
@@ -124,8 +184,17 @@ export default function GlobalPoller() {
     };
 
     fetchSpotPrices();
+    
+    const handleResume = () => {
+      fetchSpotPrices();
+    };
+    window.addEventListener('app_resumed', handleResume);
     const interval = setInterval(fetchSpotPrices, 15000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      window.removeEventListener('app_resumed', handleResume);
+      clearInterval(interval);
+    };
   }, []);
 
   // Poll for News
@@ -167,14 +236,26 @@ export default function GlobalPoller() {
             }
           }
           
-          lastNewsLinkRef.current = newestLink;
+          if (lastNewsLinkRef.current !== newestLink) {
+            lastNewsLinkRef.current = newestLink;
+            localStorage.setItem('einundzwanzig_last_news', newestLink);
+          }
         }
       } catch (e) {}
     };
 
     fetchNewsBackground();
+    
+    const handleResumeNews = () => {
+      fetchNewsBackground();
+    };
+    window.addEventListener('app_resumed', handleResumeNews);
+    
     const interval = setInterval(fetchNewsBackground, 5 * 60 * 1000); // every 5 mins
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('app_resumed', handleResumeNews);
+      clearInterval(interval);
+    };
   }, []);
 
   // Hydrate on App Resume (for Android standard suspend scenarios)

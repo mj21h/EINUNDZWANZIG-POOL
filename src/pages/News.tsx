@@ -247,22 +247,21 @@ export default function News() {
       <div className="space-y-4">
         <button 
           onClick={toggleNotifications}
-          className="w-full py-5 bg-gradient-to-r from-teal to-primary rounded-2xl flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(247,147,26,0.18)] active:scale-98 transition-all group border border-teal/20 cursor-pointer"
+          className={`w-full p-4 rounded-2xl flex items-center justify-between border transition-all cursor-pointer ${
+            notificationsEnabled ? 'bg-surface-container border-teal/20' : 'bg-surface-container border-outline-variant/15'
+          }`}
         >
-          <div className="bg-background/25 p-1.5 rounded-xl backdrop-blur-sm">
-            {notificationsEnabled ? (
-              <BellRing className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)] animate-bounce" size={22} />
-            ) : (
-              <BellOff className="text-white/70" size={22} />
-            )}
+          <div className="flex gap-4 items-center">
+            <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-teal">
+              {notificationsEnabled ? <BellRing size={20} className="animate-bounce" /> : <BellOff size={20} />}
+            </div>
+            <div className="text-left">
+              <h4 className="font-body font-bold text-on-surface text-sm">Push-Mitteilungen</h4>
+              <p className="font-body text-[10px] text-on-surface-variant">Sofortige Info bei neuen Artikeln</p>
+            </div>
           </div>
-          <div className="text-left font-body text-white">
-            <span className="block font-headline font-extrabold text-white text-lg leading-none uppercase tracking-wider">
-              {notificationsEnabled ? 'News-Push aktiv' : 'News-Push-Mitteilungen aktivieren'}
-            </span>
-            <span className="block font-body text-[10px] text-white/85 uppercase font-black tracking-widest mt-1">
-              • {notificationsEnabled ? 'Hintergrund-Abfrage alle 30 Minuten' : 'Sofortige Info bei neuen Artikeln • Alle 30 Minuten'}
-            </span>
+          <div className={`w-10 h-5 rounded-full relative transition-colors ${notificationsEnabled ? 'bg-teal' : 'bg-surface-container-highest'}`}>
+            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${notificationsEnabled ? 'left-5.5' : 'left-0.5'}`}></div>
           </div>
         </button>
 

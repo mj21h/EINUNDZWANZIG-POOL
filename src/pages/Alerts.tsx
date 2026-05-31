@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { 
-  BellRing, 
+  BellRing,
+  BellOff,
   Crosshair, 
   TriangleAlert, 
   Zap, 
@@ -19,7 +20,8 @@ import {
   ChevronUp,
   Clock,
   BookOpen,
-  Calendar
+  Calendar,
+  Pencil
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -54,6 +56,8 @@ export default function Alerts() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
+  const [pushEnabled, setPushEnabled] = useState<boolean>(false);
   
   // Custom trigger form states (Defaulting to German names/labels)
   const [newTitle, setNewTitle] = useState('');
@@ -179,7 +183,7 @@ export default function Alerts() {
     localStorage.setItem('einundzwanzig_triggers', JSON.stringify(list));
   };
 
-  const saveSettings = (updated: { 
+  const saveSettings = async (updated: { 
     dailySummary: boolean; 
     whaleAlerts: boolean; 
     soundEnabled: boolean;
@@ -196,6 +200,33 @@ export default function Alerts() {
       dailyFrequency: updated.dailyFrequency !== undefined ? updated.dailyFrequency : dailyFrequency,
     };
     localStorage.setItem('einundzwanzig_alert_settings', JSON.stringify(fresh));
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await LocalNotifications.cancel({ notifications: [{ id: 9999 }] });
+        if (fresh.dailySummary && fresh.dailyTime) {
+          const [hourStr, minStr] = fresh.dailyTime.split(':');
+          const hour = parseInt(hourStr, 10);
+          const minute = parseInt(minStr, 10);
+
+          await LocalNotifications.schedule({
+            notifications: [
+              {
+                id: 9999,
+                title: 'EINUNDZWANZIG POOL',
+                body: 'Dein tägliches Bitcoin Briefing ist bereit! Öffne die App für die aktuellen On-Chain und Kursdetails.',
+                schedule: {
+                  on: { hour, minute },
+                  allowWhileIdle: true
+                }
+              }
+            ]
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to schedule daily notification:", e);
+      }
+    }
   };
 
   const initDefaultTriggers = () => {
@@ -282,9 +313,16 @@ export default function Alerts() {
   };
 
   const handleSetPushNotification = async () => {
+    if (pushEnabled) {
+      setPushEnabled(false);
+      showToast("Push-Dienst pausiert", "Systembenachrichtigungen für Kurslevels wurden pausiert.", "info", BellRing);
+      return;
+    }
+
     if (Capacitor.isNativePlatform()) {
       const perm = await LocalNotifications.requestPermissions();
       if (perm.display === 'granted') {
+        setPushEnabled(true);
         showToast("Push-Dienst Aktiv", "Systembenachrichtigungen für Kurslevels wurden freigeschaltet.", "success", BellRing);
       } else {
         showToast("Info", "Benachrichtigungen nicht erlaubt oder nicht verfügbar.", "info");
@@ -292,6 +330,7 @@ export default function Alerts() {
     } else if ('Notification' in window) {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
+          setPushEnabled(true);
           showToast(
             "Push-Dienst Aktiv",
             "Systembenachrichtigungen für Kurslevels & volatile Bewegungen wurden freigeschaltet.",
@@ -307,6 +346,7 @@ export default function Alerts() {
         }
       });
     } else {
+      setPushEnabled(true);
       showToast(
         "Simulation",
         "Push-Dienst ist simuliert aktiv.",
@@ -347,6 +387,34 @@ export default function Alerts() {
     showToast("Alarm entfernt", `Trigger '${name}' wurde gelöscht.`, "warning");
   };
 
+  const handleEditClick = (trig: Trigger) => {
+    setEditingTriggerId(trig.id);
+    setNewTitle(trig.title);
+    
+    // Strip trailing $ or € for easier editing, or just keep it
+    let cleanPrice = trig.price.replace(/[$€]/g, '').trim();
+    if (trig.price.endsWith('€') || trig.price.includes('€') || trig.label.includes('EUR')) {
+      // Just keep as is but stripped symbols are nicer for inputs, actually it's a text input.
+      // We can just keep the original string and let the user edit it.
+      setNewPrice(cleanPrice);
+    } else {
+      setNewPrice(cleanPrice);
+    }
+    
+    setNewLabel(trig.label);
+    setNewIconType(trig.iconType);
+    setNewColor(trig.color);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTriggerId(null);
+    setNewTitle('');
+    setNewPrice('');
+    setNewLabel('Benutzerdefiniertes Level');
+  };
+
   const handleCreateCustomTrigger = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newPrice.trim()) {
@@ -361,7 +429,7 @@ export default function Alerts() {
     }
 
     const newTrig: Trigger = {
-      id: 'custom-' + Date.now().toString(),
+      id: editingTriggerId || ('custom-' + Date.now().toString()),
       iconType: newIconType,
       title: newTitle.trim(),
       price: formattedPrice,
@@ -370,16 +438,23 @@ export default function Alerts() {
       color: newColor
     };
 
-    const updated = [newTrig, ...activeTriggers];
+    let updated;
+    if (editingTriggerId) {
+      updated = activeTriggers.map(t => t.id === editingTriggerId ? newTrig : t);
+      showToast("Alarm aktualisiert", `Alarm '${newTrig.title}' wurde aktualisiert.`, "success");
+    } else {
+      updated = [newTrig, ...activeTriggers];
+      showToast("Alarm eingerichtet", `Präzisionsalarm auf ${newTrig.price} gesetzt.`, "success");
+    }
+
     saveTriggers(updated);
     setIsModalOpen(false);
+    setEditingTriggerId(null);
     
     // Reset Form
     setNewTitle('');
     setNewPrice('');
     setNewLabel('Benutzerdefiniertes Level');
-
-    showToast("Alarm eingerichtet", `Präzisionsalarm für '${newTrig.title}' auf ${newTrig.price} gesetzt.`, "success");
   };
 
   const translateStatus = (status: string) => {
@@ -486,14 +561,21 @@ export default function Alerts() {
         
         <button 
           onClick={handleSetPushNotification}
-          className="w-full py-5 bg-gradient-to-r from-teal to-primary rounded-2xl flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(247,147,26,0.18)] active:scale-98 transition-all group border border-teal/20 cursor-pointer"
+          className={`w-full p-4 rounded-2xl flex items-center justify-between border transition-all cursor-pointer ${
+            pushEnabled ? 'bg-surface-container border-teal/20' : 'bg-surface-container border-outline-variant/15'
+          }`}
         >
-          <div className="bg-background/25 p-1.5 rounded-xl backdrop-blur-sm">
-            <BellRing className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]" size={22} />
+          <div className="flex gap-4 items-center">
+            <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-teal">
+              {pushEnabled ? <BellRing size={20} className="animate-bounce" /> : <BellOff size={20} />}
+            </div>
+            <div className="text-left">
+              <h4 className="font-body font-bold text-on-surface text-sm">Push-Mitteilungen</h4>
+              <p className="font-body text-[10px] text-on-surface-variant">Neue Kursziele & Kritische Levels</p>
+            </div>
           </div>
-          <div className="text-left font-body text-white">
-            <span className="block font-headline font-extrabold text-white text-lg leading-none uppercase tracking-wider">Push-Mitteilungen aktivieren</span>
-            <span className="block font-body text-[10px] text-white/85 uppercase font-black tracking-widest mt-1">Neue Kursziele & Kritische Levels</span>
+          <div className={`w-10 h-5 rounded-full relative transition-colors ${pushEnabled ? 'bg-teal' : 'bg-surface-container-highest'}`}>
+            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${pushEnabled ? 'left-5.5' : 'left-0.5'}`}></div>
           </div>
         </button>
       </div>
@@ -564,9 +646,6 @@ export default function Alerts() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="font-body font-bold text-on-surface text-sm">Tägliche Kursübersicht</h4>
-                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded border border-primary/15 font-mono">
-                      {dailySummary ? "Aktiv" : "Pausiert"}
-                    </span>
                   </div>
                   <p className="font-body text-[10px] text-on-surface-variant flex items-center gap-1.5 mt-0.5 flex-wrap">
                     <span className="flex items-center gap-0.5"><Clock size={10} className="text-teal animate-pulse" /> {dailyTime} UTC</span>
@@ -579,15 +658,6 @@ export default function Alerts() {
               </div>
               
               <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                {/* Expand Settings button icon */}
-                <button 
-                  onClick={() => setIsDailySettingsOpen(!isDailySettingsOpen)}
-                  className="p-1 rounded-lg text-on-surface-variant/50 hover:text-teal hover:bg-background/40 transition-colors cursor-pointer"
-                  title="Einstellungen anpassen"
-                >
-                  <Sliders size={16} className={isDailySettingsOpen ? "text-teal rotate-90 duration-300" : "duration-350"} />
-                </button>
-
                 {/* Main Toggle switch */}
                 <button 
                   onClick={() => {
@@ -606,12 +676,13 @@ export default function Alerts() {
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${dailySummary ? 'left-5.5' : 'left-0.5'}`}></div>
                 </button>
 
-                {/* Chevron marker */}
+                {/* Expand Settings button icon (Pencil) */}
                 <button 
                   onClick={() => setIsDailySettingsOpen(!isDailySettingsOpen)}
-                  className="p-1 text-on-surface-variant/40 hover:text-on-surface cursor-pointer"
+                  className="p-1 rounded-lg text-on-surface-variant/50 hover:text-teal transition-colors cursor-pointer"
+                  title="Einstellungen anpassen"
                 >
-                  {isDailySettingsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  <Pencil size={16} className={isDailySettingsOpen ? "text-teal" : ""} />
                 </button>
               </div>
             </div>
@@ -904,7 +975,7 @@ export default function Alerts() {
       <section className="space-y-4 pb-12">
         <div className="flex justify-between items-center">
           <h3 className="font-body text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold">
-            Aktive Alarme ({activeTriggers.length})
+            Alarme ({activeTriggers.length})
           </h3>
           <button 
             onClick={() => setIsModalOpen(true)}
@@ -940,14 +1011,16 @@ export default function Alerts() {
                         {trig.title}
                       </span>
                     </div>
-                    {/* Delete dynamic trigger */}
-                    <button 
-                      onClick={() => deleteTrigger(trig.id, trig.title)}
-                      className="text-on-surface-variant/40 hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer"
-                      title="Alarm löschen"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {/* Actions */}
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => handleEditClick(trig)}
+                        className="text-on-surface-variant/40 hover:text-teal p-1 rounded-lg transition-colors cursor-pointer"
+                        title="Alarm bearbeiten"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex items-baseline gap-2 mb-1.5">
                     <span className="font-headline font-extrabold text-2xl text-on-surface leading-none">{trig.price}</span>
@@ -974,7 +1047,7 @@ export default function Alerts() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.6 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
+              onClick={handleCloseModal}
               className="absolute inset-0 bg-background"
             />
             {/* Box modal */}
@@ -986,8 +1059,10 @@ export default function Alerts() {
               className="bg-surface-container border border-outline-variant/35 rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-10 hide-scrollbar"
             >
               <div className="px-5 py-4 bg-surface-container-high/60 border-b border-outline-variant/15 flex justify-between items-center">
-                <span className="font-headline font-extrabold text-sm uppercase tracking-wider text-teal">Benutzerdefinierter Alarm</span>
-                <button onClick={() => setIsModalOpen(false)} className="text-on-surface-variant/60 hover:text-on-surface">
+                <span className="font-headline font-extrabold text-sm uppercase tracking-wider text-teal">
+                  {editingTriggerId ? 'Alarm bearbeiten' : 'Benutzerdefinierter Alarm'}
+                </span>
+                <button onClick={handleCloseModal} className="text-on-surface-variant/60 hover:text-on-surface">
                   <X size={18} />
                 </button>
               </div>
@@ -1059,12 +1134,26 @@ export default function Alerts() {
                   </div>
                 </div>
 
-                <button 
-                  type="submit"
-                  className="w-full py-3 bg-gradient-to-r from-teal to-primary text-background shadow-[0_4px_16px_rgba(247,147,26,0.18)] font-headline font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-97 cursor-pointer mt-4"
-                >
-                  🚀 Alarm aktivieren
-                </button>
+                <div className="flex gap-2 mt-4">
+                  {editingTriggerId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteTrigger(editingTriggerId, newTitle);
+                        handleCloseModal();
+                      }}
+                      className="py-3 px-4 bg-red-500/10 text-red-400 border border-red-500/20 font-headline font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all active:scale-97 cursor-pointer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                  <button 
+                    type="submit"
+                    className="flex-1 py-3 bg-gradient-to-r from-teal to-primary text-background shadow-[0_4px_16px_rgba(247,147,26,0.18)] font-headline font-black text-xs uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-97 cursor-pointer"
+                  >
+                    {editingTriggerId ? '✓ Speichern' : '🚀 Alarm aktivieren'}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>
