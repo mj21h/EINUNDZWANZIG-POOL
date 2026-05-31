@@ -1,12 +1,17 @@
 import fs from 'fs';
-import { Resvg } from '@resvg/resvg-js';
+import sharp from 'sharp';
 
-const svg = fs.readFileSync('public/bitcoin-logo.svg', 'utf8');
-const resvg = new Resvg(svg, {
-  fitTo: { mode: 'width', value: 512 },
-});
-const pngData = resvg.render();
-const pngBuffer = pngData.asPng();
+async function generate() {
+  try {
+    await sharp('public/bitcoin-logo.svg')
+      .resize(512, 512)
+      .png()
+      .toFile('public/bitcoin-logo-512.png');
+    console.log('PNG generated successfully');
+  } catch (error) {
+    console.error('Error generating PNG:', error);
+    process.exit(1);
+  }
+}
 
-fs.writeFileSync('public/bitcoin-logo-512.png', pngBuffer);
-console.log('PNG generated successfully');
+generate();

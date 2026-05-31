@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, ExternalLink, Clock, Newspaper, Loader, Bell, BellRing, BellOff } from 'lucide-react';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 
 interface NewsItem {
+
   id: string;
   title: string;
   link: string;
@@ -46,26 +49,26 @@ export default function News() {
   const toggleNotifications = async () => {
     if (typeof window === 'undefined') return;
 
-    if (!('Notification' in window)) {
-      setNotificationPermission('unsupported');
-      return;
-    }
-
     if (notificationsEnabled) {
       setNotificationsEnabled(false);
       localStorage.setItem('einundzwanzig_news_notifications', 'false');
     } else {
       try {
-        const permission = await Notification.requestPermission();
+        let permission = 'denied';
+        if (Capacitor.isNativePlatform()) {
+          const perm = await LocalNotifications.requestPermissions();
+          permission = perm.display;
+        } else if ('Notification' in window) {
+          permission = await Notification.requestPermission();
+        }
+
         setNotificationPermission(permission);
         if (permission === 'granted') {
           setNotificationsEnabled(true);
           localStorage.setItem('einundzwanzig_news_notifications', 'true');
           
-          if ('serviceWorker' in navigator) {
+          if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
             const reg = await navigator.serviceWorker.register('/sw.js');
-            console.log('Service Worker registered:', reg.scope);
-            
             // Try of periodicsync trigger registration if supported
             if ('periodicSync' in reg) {
               try {
@@ -74,18 +77,11 @@ export default function News() {
                 });
                 if (status.state === 'granted') {
                   await (reg as any).periodicSync.register('check-news-periodic', {
-                    minInterval: 30 * 60 * 1000, // 30 minutes
+                    minInterval: 30 * 60 * 1000,
                   });
                 }
-              } catch (pe) {
-                console.warn('PeriodicSync registration failed:', pe);
-              }
+              } catch (pe) {}
             }
-            
-            // Post message to make sure we cache the current latest item
-            setTimeout(() => {
-              reg.active?.postMessage({ type: 'CHECK_LATEST_NEWS' });
-            }, 1000);
           }
         }
       } catch (err) {
@@ -94,18 +90,31 @@ export default function News() {
     }
   };
 
-  const sendTestNotification = () => {
-    if ('serviceWorker' in navigator && notificationsEnabled) {
-      navigator.serviceWorker.ready.then((reg) => {
-        reg.showNotification('EINUNDZWANZIG POOL', {
-          body: 'Benachrichtigungsdienst erfolgreich gestartet! Du wirst nun über neue Artikel informiert.',
-          badge: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
-          icon: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
-          requireInteraction: false
+  const sendTestNotification = async () => {
+    if (notificationsEnabled) {
+      if (Capacitor.isNativePlatform()) {
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: Math.floor(Math.random() * 1000000),
+              title: 'EINUNDZWANZIG POOL',
+              body: 'Benachrichtigungsdienst erfolgreich gestartet! Du wirst nun über neue Artikel informiert.',
+            }
+          ]
         });
         setTestNotificationSent(true);
         setTimeout(() => setTestNotificationSent(false), 5000);
-      });
+      } else if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.showNotification('EINUNDZWANZIG POOL', {
+            body: 'Benachrichtigungsdienst erfolgreich gestartet! Du wirst nun über neue Artikel informiert.',
+            icon: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
+            requireInteraction: false
+          });
+          setTestNotificationSent(true);
+          setTimeout(() => setTestNotificationSent(false), 5000);
+        });
+      }
     }
   };
 

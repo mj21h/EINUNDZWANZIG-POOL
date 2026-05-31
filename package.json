@@ -5,14 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node create-png.js && vite build",
     "preview": "vite preview",
     "clean": "rimraf dist android app",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/core": "^8.3.4",
+    "@capacitor/local-notifications": "^8.2.0",
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
@@ -36,6 +38,7 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.0",
     "rimraf": "^6.1.3",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",

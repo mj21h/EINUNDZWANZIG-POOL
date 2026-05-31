@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { 
   BellRing, 
   Crosshair, 
@@ -144,7 +146,17 @@ export default function Alerts() {
             "success"
           );
           
-          if ('Notification' in window && Notification.permission === 'granted') {
+          if (Capacitor.isNativePlatform()) {
+            LocalNotifications.schedule({
+              notifications: [
+                {
+                  id: Math.floor(Math.random() * 1000000),
+                  title: 'EINUNDZWANZIG POOL: Alarm!',
+                  body: `${trig.title || trig.label} (${trig.price}) wurde soeben erreicht!`,
+                }
+              ]
+            }).catch(e => console.warn("Native Notification error:", e));
+          } else if ('Notification' in window && Notification.permission === 'granted') {
             try {
               navigator.serviceWorker.ready.then(reg => {
                 reg.showNotification('EINUNDZWANZIG POOL: Alarm!', {
@@ -354,8 +366,15 @@ export default function Alerts() {
     }, 4500);
   };
 
-  const handleSetPushNotification = () => {
-    if ('Notification' in window) {
+  const handleSetPushNotification = async () => {
+    if (Capacitor.isNativePlatform()) {
+      const perm = await LocalNotifications.requestPermissions();
+      if (perm.display === 'granted') {
+        showToast("Push-Dienst Aktiv", "Systembenachrichtigungen für Kurslevels wurden freigeschaltet.", "success", BellRing);
+      } else {
+        showToast("Info", "Benachrichtigungen nicht erlaubt oder nicht verfügbar.", "info");
+      }
+    } else if ('Notification' in window) {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
           showToast(
@@ -366,16 +385,16 @@ export default function Alerts() {
           );
         } else {
           showToast(
-            "Simulierter Push Aktiv",
-            "Push-Dienst wurde erfolgreich im App-Sandkasten registriert.",
+            "Push abgelehnt",
+            "Bitte erlaube Mitteilungen in den Browser-Einstellungen.",
             "info"
           );
         }
       });
     } else {
       showToast(
-        "Benachrichtigungen Aktiv",
-        "Push-Dienst wurde erfolgreich im App-Sandkasten registriert.",
+        "Simulation",
+        "Push-Dienst ist simuliert aktiv.",
         "success"
       );
     }
@@ -893,9 +912,28 @@ export default function Alerts() {
                               <div className="pt-2 border-t border-outline-variant/15 flex gap-2">
                                 <button
                                   onClick={() => {
+                                    if (Capacitor.isNativePlatform()) {
+                                      LocalNotifications.schedule({
+                                        notifications: [
+                                          {
+                                            id: Math.floor(Math.random() * 1000000),
+                                            title: 'EINUNDZWANZIG POOL',
+                                            body: `Tägliches Briefing (${dailyScope})! Bitcoin Kurs ist stabil.`,
+                                          }
+                                        ]
+                                      });
+                                    } else if ('Notification' in window && Notification.permission === 'granted') {
+                                      navigator.serviceWorker.ready.then(reg => {
+                                        reg.showNotification('EINUNDZWANZIG POOL', {
+                                          body: 'Tägliches Briefing simuliert!',
+                                          icon: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
+                                        });
+                                      });
+                                    }
+                                    
                                     showToast(
                                       "Test-Briefing gesendet",
-                                      `Simulierter Bericht (${dailyScope}) erfolgreich per Web-Mitteilung ausgeliefert!`,
+                                      `Simulierter Bericht (${dailyScope}) erfolgreich ausgeliefert!`,
                                       "success",
                                       Newspaper
                                     );

@@ -25,10 +25,10 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: Setup Java JDK 21
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Install Node.js Dependencies
@@ -41,6 +41,19 @@ jobs:
         run: |
           npx cap add android
           npx cap copy android
+          
+      - name: Generate App Icons and Splash
+        run: |
+          mkdir -p assets
+          cp public/bitcoin-logo-512.png assets/icon.png
+          cp public/bitcoin-logo-512.png assets/icon-dark.png
+          cp public/bitcoin-logo-512.png assets/splash.png
+          cp public/bitcoin-logo-512.png assets/splash-dark.png
+          npx capacitor-assets generate --android --iconBackgroundColor '#0b0c0e' --iconBackgroundColorDark '#0b0c0e' --splashBackgroundColor '#0b0c0e' --splashBackgroundColorDark '#0b0c0e'
+          
+      - name: Patch AndroidManifest for Notifications
+        run: |
+          sed -i '/<uses-permission android:name="android.permission.INTERNET" \/>/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" \/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" \/>\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" \/>' android/app/src/main/AndroidManifest.xml
 
       - name: Generate Custom Keystore for Signing
         run: |
