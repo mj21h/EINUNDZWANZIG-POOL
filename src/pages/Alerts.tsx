@@ -109,127 +109,42 @@ export default function Alerts() {
     }
   };
 
-  const checkCrossings = (prevPrice: number, currentPrice: number, isUSD: boolean) => {
-    if (prevPrice <= 0 || currentPrice <= 0 || prevPrice === currentPrice) return;
-    
-    setActiveTriggers(prevList => {
-      let changed = false;
-      const triggersToKeep: Trigger[] = [];
-      
-      for (const trig of prevList) {
-        if (trig.price.includes('%')) {
-          triggersToKeep.push(trig);
-          continue;
-        }
-        
-        const isTrigUSD = !trig.price.includes('€') && !trig.label.includes('EUR');
-        if (isTrigUSD !== isUSD) {
-          triggersToKeep.push(trig);
-          continue;
-        }
-        
-        const targetPrice = parseNumericPrice(trig.price);
-        if (targetPrice <= 0) {
-          triggersToKeep.push(trig);
-          continue;
-        }
-        
-        const crossedAbove = prevPrice < targetPrice && currentPrice >= targetPrice;
-        const crossedBelow = prevPrice > targetPrice && currentPrice <= targetPrice;
-        
-        if (crossedAbove || crossedBelow) {
-          changed = true;
-          
-          showToast(
-            `🎯 Alarm ausgelöst!`,
-            `${trig.label || trig.title}: Zielwert von ${trig.price} gekreuzt bei ${isUSD ? "$" : "€"}${currentPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}!`,
-            "success"
-          );
-          
-          if (Capacitor.isNativePlatform()) {
-            LocalNotifications.schedule({
-              notifications: [
-                {
-                  id: Math.floor(Math.random() * 1000000),
-                  title: 'EINUNDZWANZIG POOL: Alarm!',
-                  body: `${trig.title || trig.label} (${trig.price}) wurde soeben erreicht!`,
-                }
-              ]
-            }).catch(e => console.warn("Native Notification error:", e));
-          } else if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-              navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification('EINUNDZWANZIG POOL: Alarm!', {
-                  body: `${trig.title || trig.label} (${trig.price}) wurde soeben erreicht!`,
-                  badge: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
-                  icon: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
-                  requireInteraction: true
-                });
-              });
-            } catch (ne) {
-              console.warn("SW notify error:", ne);
-            }
-          }
-          
-          if (trig.status === "PERSISTENT" || trig.status === "RECURRING") {
-            triggersToKeep.push(trig);
-          }
-        } else {
-          triggersToKeep.push(trig);
-        }
-      }
-      
-      if (changed) {
-        localStorage.setItem('einundzwanzig_triggers', JSON.stringify(triggersToKeep));
-        return triggersToKeep;
-      }
-      return prevList;
-    });
-  };
-
+  // checkCrossings handling is now centrally managed by GlobalPoller to ensure consistent execution 
+  
   useEffect(() => {
-    const fetchSpotPrices = async () => {
-      try {
-        const [resUsd, resEur] = await Promise.all([
-          fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot'),
-          fetch('https://api.coinbase.com/v2/prices/BTC-EUR/spot')
-        ]);
-        
-        let fetchedUsd = 0;
-        let fetchedEur = 0;
-        
-        if (resUsd.ok) {
-          const jsonVal = await resUsd.json();
-          fetchedUsd = parseFloat(jsonVal.data.amount) || 0;
-        }
-        if (resEur.ok) {
-          const jsonVal = await resEur.json();
-          fetchedEur = parseFloat(jsonVal.data.amount) || 0;
-        }
-        
-        if (fetchedUsd > 0) {
-          setUsdPrice(fetchedUsd);
-          if (prevUsdPriceRef.current > 0 && prevUsdPriceRef.current !== fetchedUsd) {
-            checkCrossings(prevUsdPriceRef.current, fetchedUsd, true);
-          }
-          prevUsdPriceRef.current = fetchedUsd;
-        }
-        
-        if (fetchedEur > 0) {
-          setEurPrice(fetchedEur);
-          if (prevEurPriceRef.current > 0 && prevEurPriceRef.current !== fetchedEur) {
-            checkCrossings(prevEurPriceRef.current, fetchedEur, false);
-          }
-          prevEurPriceRef.current = fetchedEur;
-        }
-      } catch (e) {
-        console.warn("Fail to fetch prices in Alerts:", e);
+    const handlePriceUpdate = (e: any) => {
+      const { usd, eur } = e.detail;
+      if (usd > 0) setUsdPrice(usd);
+      if (eur > 0) setEurPrice(eur);
+    };
+
+    const handleTriggersUpdated = () => {
+      const saved = localStorage.getItem('einundzwanzig_triggers');
+      if (saved) {
+        try {
+          setActiveTriggers(JSON.parse(saved));
+        } catch (e) {}
       }
     };
+
+    const handleTriggerFired = (e: any) => {
+      const trig = e.detail;
+      showToast(
+        `🎯 Alarm ausgelöst!`,
+        `${trig.label || trig.title}: Zielwert von ${trig.price} erreicht!`,
+        "success"
+      );
+    };
+
+    window.addEventListener('coinbase_prices_updated', handlePriceUpdate);
+    window.addEventListener('triggers_updated', handleTriggersUpdated);
+    window.addEventListener('trigger_fired', handleTriggerFired);
     
-    fetchSpotPrices();
-    const interval = setInterval(fetchSpotPrices, 12000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('coinbase_prices_updated', handlePriceUpdate);
+      window.removeEventListener('triggers_updated', handleTriggersUpdated);
+      window.removeEventListener('trigger_fired', handleTriggerFired);
+    };
   }, []);
 
   // Load custom saved triggers on load

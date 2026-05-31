@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Analysis from './pages/Analysis';
 import News from './pages/News';
 import Alerts from './pages/Alerts';
+import GlobalPoller from './components/GlobalPoller';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function App() {
@@ -20,8 +21,10 @@ export default function App() {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      <AnimatePresence mode="wait">
+    <>
+      <GlobalPoller />
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+        <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 10 }}
@@ -33,5 +36,6 @@ export default function App() {
         </motion.div>
       </AnimatePresence>
     </Layout>
+    </>
   );
 }
