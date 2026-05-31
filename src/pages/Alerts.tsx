@@ -57,7 +57,12 @@ export default function Alerts() {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingTriggerId, setEditingTriggerId] = useState<string | null>(null);
-  const [pushEnabled, setPushEnabled] = useState<boolean>(false);
+  const [pushEnabled, setPushEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('einundzwanzig_alert_push_enabled') === 'true';
+    }
+    return false;
+  });
   
   // Custom trigger form states (Defaulting to German names/labels)
   const [newTitle, setNewTitle] = useState('');
@@ -315,6 +320,9 @@ export default function Alerts() {
   const handleSetPushNotification = async () => {
     if (pushEnabled) {
       setPushEnabled(false);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('einundzwanzig_alert_push_enabled', 'false');
+      }
       showToast("Push-Dienst pausiert", "Systembenachrichtigungen für Kurslevels wurden pausiert.", "info", BellRing);
       return;
     }
@@ -323,6 +331,9 @@ export default function Alerts() {
       const perm = await LocalNotifications.requestPermissions();
       if (perm.display === 'granted') {
         setPushEnabled(true);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('einundzwanzig_alert_push_enabled', 'true');
+        }
         showToast("Push-Dienst Aktiv", "Systembenachrichtigungen für Kurslevels wurden freigeschaltet.", "success", BellRing);
       } else {
         showToast("Info", "Benachrichtigungen nicht erlaubt oder nicht verfügbar.", "info");
@@ -331,6 +342,9 @@ export default function Alerts() {
       Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
           setPushEnabled(true);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('einundzwanzig_alert_push_enabled', 'true');
+          }
           showToast(
             "Push-Dienst Aktiv",
             "Systembenachrichtigungen für Kurslevels & volatile Bewegungen wurden freigeschaltet.",
@@ -347,6 +361,9 @@ export default function Alerts() {
       });
     } else {
       setPushEnabled(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('einundzwanzig_alert_push_enabled', 'true');
+      }
       showToast(
         "Simulation",
         "Push-Dienst ist simuliert aktiv.",
@@ -418,7 +435,13 @@ export default function Alerts() {
   const handleCreateCustomTrigger = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newPrice.trim()) {
-      showToast("Validierungsfehler", "Titel und Preis sind erforderlich.", "warning");
+      showToast("Validierungsfehler", "Titel und Preis sind erforderlich.", "warning", TriangleAlert);
+      return;
+    }
+
+    const priceHasDigits = /[0-9]/.test(newPrice);
+    if (!priceHasDigits) {
+      showToast("Validierungsfehler", "Bitte geben Sie einen gültigen numerischen Preis ein.", "warning", TriangleAlert);
       return;
     }
 
