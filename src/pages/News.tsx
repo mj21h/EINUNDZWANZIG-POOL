@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ExternalLink, Clock, Newspaper, Loader, Bell, BellRing, BellOff } from 'lucide-react';
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { Capacitor } from '@capacitor/core';
+import { RefreshCw, ExternalLink, Clock, Newspaper, Loader } from 'lucide-react';
 
 interface NewsItem {
 
@@ -18,105 +16,6 @@ export default function News() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-
-  const [notificationPermission, setNotificationPermission] = useState<string>(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      return Notification.permission;
-    }
-    return 'unsupported';
-  });
-
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('einundzwanzig_news_notifications') === 'true';
-    }
-    return false;
-  });
-
-  const [testNotificationSent, setTestNotificationSent] = useState<boolean>(false);
-
-  // Auto register when page loads if enabled
-  useEffect(() => {
-    if (notificationsEnabled && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then((reg) => {
-        console.log('SW register success from mount:', reg.scope);
-      }).catch((err) => {
-        console.warn('SW registration failed on mount:', err);
-      });
-    }
-  }, [notificationsEnabled]);
-
-  const toggleNotifications = async () => {
-    if (typeof window === 'undefined') return;
-
-    if (notificationsEnabled) {
-      setNotificationsEnabled(false);
-      localStorage.setItem('einundzwanzig_news_notifications', 'false');
-    } else {
-      try {
-        let permission = 'denied';
-        if (Capacitor.isNativePlatform()) {
-          const perm = await LocalNotifications.requestPermissions();
-          permission = perm.display;
-        } else if ('Notification' in window) {
-          permission = await Notification.requestPermission();
-        }
-
-        setNotificationPermission(permission);
-        if (permission === 'granted') {
-          setNotificationsEnabled(true);
-          localStorage.setItem('einundzwanzig_news_notifications', 'true');
-          
-          if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
-            const reg = await navigator.serviceWorker.register('/sw.js');
-            // Try of periodicsync trigger registration if supported
-            if ('periodicSync' in reg) {
-              try {
-                const status = await navigator.permissions.query({
-                  name: 'periodic-background-sync' as any,
-                });
-                if (status.state === 'granted') {
-                  await (reg as any).periodicSync.register('check-news-periodic', {
-                    minInterval: 30 * 60 * 1000,
-                  });
-                }
-              } catch (pe) {}
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error enabling notifications:', err);
-      }
-    }
-  };
-
-  const sendTestNotification = async () => {
-    if (notificationsEnabled) {
-      if (Capacitor.isNativePlatform()) {
-        await LocalNotifications.schedule({
-          notifications: [
-            {
-              id: Math.floor(Math.random() * 1000000),
-              title: 'EINUNDZWANZIG POOL',
-              body: 'Benachrichtigungsdienst erfolgreich gestartet! Du wirst nun über neue Artikel informiert.',
-            }
-          ]
-        });
-        setTestNotificationSent(true);
-        setTimeout(() => setTestNotificationSent(false), 5000);
-      } else if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then((reg) => {
-          reg.showNotification('EINUNDZWANZIG POOL', {
-            body: 'Benachrichtigungsdienst erfolgreich gestartet! Du wirst nun über neue Artikel informiert.',
-            icon: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
-            requireInteraction: false
-          });
-          setTestNotificationSent(true);
-          setTimeout(() => setTestNotificationSent(false), 5000);
-        });
-      }
-    }
-  };
 
   const fetchNews = async (isManualRefresh = false) => {
     if (isManualRefresh) {
@@ -241,64 +140,6 @@ export default function News() {
         <p className="font-body text-on-surface-variant text-sm">
           Die aktuellsten Artikel und Analysen direkt vom größten deutschen Bitcoin-Portal.
         </p>
-      </div>
-
-      {/* Dynamic News Notification Settings Card */}
-      <div className="space-y-4">
-        <button 
-          onClick={toggleNotifications}
-          className={`w-full p-4 rounded-2xl flex items-center justify-between border transition-all cursor-pointer ${
-            notificationsEnabled ? 'bg-surface-container border-teal/20' : 'bg-surface-container border-outline-variant/15'
-          }`}
-        >
-          <div className="flex gap-4 items-center">
-            <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-teal">
-              {notificationsEnabled ? <BellRing size={20} className="animate-bounce" /> : <BellOff size={20} />}
-            </div>
-            <div className="text-left">
-              <h4 className="font-body font-bold text-on-surface text-sm">Push-Mitteilungen</h4>
-              <p className="font-body text-[10px] text-on-surface-variant">Sofortige Info bei neuen Artikeln</p>
-            </div>
-          </div>
-          <div className={`w-10 h-5 rounded-full relative transition-colors ${notificationsEnabled ? 'bg-teal' : 'bg-surface-container-highest'}`}>
-            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${notificationsEnabled ? 'left-5.5' : 'left-0.5'}`}></div>
-          </div>
-        </button>
-
-        {/* Warning/Tips or Test Button */}
-        {notificationsEnabled && (
-          <div className="bg-[#1a1a1a]/40 border border-[#F7931A]/10 rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between text-xs text-on-surface-variant font-body select-none">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Dienst aktiv • Hintergrundsync eingestellt</span>
-            </div>
-            <button
-              onClick={sendTestNotification}
-              disabled={testNotificationSent}
-              className="text-xs font-bold text-[#F7931A] hover:text-[#ffb353] bg-[#F7931A]/5 hover:bg-[#F7931A]/10 border border-[#F7931A]/20 px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer font-headline"
-            >
-              {testNotificationSent ? '✓ Test gesendet' : 'Test-Meldung senden'}
-            </button>
-          </div>
-        )}
-
-        {notificationPermission === 'denied' && (
-          <div className="bg-error/5 border border-error/15 rounded-xl p-3 text-[11px] text-error flex items-start gap-2 leading-relaxed">
-            <span className="font-bold flex-shrink-0">⚠️ Hinweis:</span>
-            <span>
-              Benachrichtigungserlaubnis wurde im Browser verweigert. Falls du dich im Vorschau-Fenster befindest, öffne die App über den Button oben rechts in einem separaten Tab, um die Erlaubnis freizugeben.
-            </span>
-          </div>
-        )}
-
-        {notificationPermission === 'unsupported' && (
-          <div className="bg-surface-container-low border border-outline-variant/10 rounded-xl p-3 text-[11px] text-on-surface-variant flex items-start gap-2 leading-relaxed">
-            <span>ℹ️ System-Kompatibilität:</span>
-            <span>
-              Push-Meldungen werden von deinem aktuellen Browser oder Modus nicht vollständig unterstützt. Versuche, die App in einem modernen Desktop-Browser zu öffnen.
-            </span>
-          </div>
-        )}
       </div>
 
       {loading && (

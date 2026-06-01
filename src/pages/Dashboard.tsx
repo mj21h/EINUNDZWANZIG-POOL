@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, ArrowUpRight, ChevronDown, ChevronUp, Loader } from 'lucide-react';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  ArrowUpRight, 
+  ChevronDown, 
+  ChevronUp, 
+  Loader,
+  Newspaper,
+  Clock,
+  Activity,
+  Cpu,
+  Database,
+  Waves,
+  RefreshCw,
+  Zap
+} from 'lucide-react';
 import { adoptionImageBase64 } from '../assets/adoptionImage';
 
 interface ChartPoint {
@@ -183,6 +198,69 @@ export default function Dashboard() {
   const [selectedInterval, setSelectedInterval] = useState<string>('24h');
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 144 });
+
+  // Live Briefing States
+  const [liveInfo, setLiveInfo] = useState({
+    mempoolFee: 14,
+    hashrate: 612.4,
+    blockHeight: 844912,
+    unconfirmedTx: 112106,
+    minerStatus: '100% Aktiv',
+    lastUpdated: new Date()
+  });
+
+  const [isRefreshingLive, setIsRefreshingLive] = useState<boolean>(false);
+  const lastBlockHeightRef = React.useRef<number>(0);
+
+  const fetchMempoolData = async (manual = false) => {
+    if (manual) setIsRefreshingLive(true);
+    try {
+      const ts = Date.now();
+      const [feeRes, blockRes, mempoolRes, hashRes] = await Promise.all([
+        fetch(`https://mempool.space/api/v1/fees/recommended?_t=${ts}`),
+        fetch(`https://mempool.space/api/blocks/tip/height?_t=${ts}`),
+        fetch(`https://mempool.space/api/mempool?_t=${ts}`),
+        fetch(`https://mempool.space/api/v1/mining/hashrate/3d?_t=${ts}`)
+      ]);
+
+      const feeData = await feeRes.json();
+      const nextBlock = parseInt(await blockRes.text(), 10);
+      const mempoolData = await mempoolRes.json();
+      const hashData = await hashRes.json();
+
+      const newFee = feeData.fastestFee;
+      const newUnconfirmedTx = mempoolData.count;
+      const newHash = parseFloat((hashData.currentHashrate / 1000000000000000000).toFixed(1));
+
+      lastBlockHeightRef.current = nextBlock;
+
+      setLiveInfo(prev => {
+        return {
+          ...prev,
+          mempoolFee: newFee,
+          hashrate: newHash,
+          blockHeight: nextBlock,
+          unconfirmedTx: newUnconfirmedTx,
+          lastUpdated: new Date()
+        };
+      });
+    } catch (e) {
+      console.error("Fehler beim Abrufen der Mempool-Daten", e);
+    } finally {
+      if (manual) setIsRefreshingLive(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMempoolData();
+    const dataTimer = setInterval(() => fetchMempoolData(), 8000);
+
+    return () => clearInterval(dataTimer);
+  }, []);
+
+  const handleManualRefreshLive = () => {
+    fetchMempoolData(true);
+  };
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -467,6 +545,95 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Live-Briefing & Netzwerkstatus Section */}
+      <section className="bg-surface-container-low border border-outline-variant/10 rounded-2xl p-5 space-y-4">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
+            </span>
+            <div className="flex items-center gap-1.5 text-on-surface">
+              <Newspaper size={18} className="text-teal" />
+              <h3 className="font-headline font-black text-[13px] tracking-wider uppercase">
+                Mempool
+              </h3>
+            </div>
+          </div>
+          
+          <button 
+            onClick={handleManualRefreshLive}
+            disabled={isRefreshingLive}
+            className="flex items-center gap-1 text-[9px] uppercase tracking-wider font-extrabold text-on-surface-variant hover:text-teal active:scale-95 transition-all cursor-pointer select-none"
+            title="Daten aktualisieren"
+          >
+            <RefreshCw size={11} className={isRefreshingLive ? "animate-spin text-teal" : ""} />
+            <span>Aktualisieren</span>
+          </button>
+        </div>
+
+        {/* Live brief widgets grid */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {/* Fee Widget */}
+          <div className="bg-[#151515] p-3 rounded-xl border border-outline-variant/5">
+            <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold flex items-center gap-1">
+              <Zap size={11} className="text-[#F7931A]" /> Mempool-Gebühr
+            </span>
+            <div className="flex items-baseline gap-1 mt-1.5">
+              <span className="font-headline font-extrabold text-xl text-on-surface">{liveInfo.mempoolFee}</span>
+              <span className="text-[11px] text-[#F7931A] font-semibold">sat/vB</span>
+            </div>
+            <span className="text-[9px] uppercase text-emerald-400 font-bold block mt-1">
+              • Optimal & Günstig
+            </span>
+          </div>
+
+          {/* Hashrate Widget */}
+          <div className="bg-[#151515] p-3 rounded-xl border border-outline-variant/5">
+            <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold flex items-center gap-1">
+              <Cpu size={11} className="text-teal" /> Pool-Hashrate
+            </span>
+            <div className="flex items-baseline gap-1 mt-1.5">
+              <span className="font-headline font-extrabold text-xl text-on-surface">{liveInfo.hashrate}</span>
+              <span className="text-[11px] text-teal font-semibold">EH/s</span>
+            </div>
+            <span className="text-[9px] uppercase text-teal font-extrabold block mt-1">
+              • Globale Rechenleistung
+            </span>
+          </div>
+
+          {/* Block Widget */}
+          <div className="bg-[#151515] p-3 rounded-xl border border-outline-variant/5">
+            <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold flex items-center gap-1">
+              <Database size={11} className="text-teal" /> Letzter Block
+            </span>
+            <div className="flex items-baseline gap-1 mt-1.5">
+              <span className="font-headline font-bold text-lg text-on-surface">#{liveInfo.blockHeight}</span>
+            </div>
+            <span className="text-[9px] uppercase text-on-surface-variant block mt-1 pb-0.5">
+              Status: Bestätigt
+            </span>
+          </div>
+
+          {/* Miner Node status */}
+          <div className="bg-[#151515] p-3 rounded-xl border border-outline-variant/5">
+            <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold flex items-center gap-1">
+              <Activity size={11} className="text-[#F7931A]" /> Unbestätigt
+            </span>
+            <div className="flex items-baseline gap-1 mt-1.5">
+              <span className="font-headline font-extrabold text-xl text-white">{liveInfo.unconfirmedTx.toLocaleString('de-DE')}</span>
+              <span className="text-[11px] text-[#F7931A] font-semibold">TX</span>
+            </div>
+            <span className="text-[9px] uppercase text-on-surface-variant font-bold block mt-1">
+              • TX im Mempool
+            </span>
+          </div>
+        </div>
+
+
+      </section>
 
       {/* Für Einsteiger Section */}
       <section className="space-y-5">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, BarChart2, Newspaper, Bell } from 'lucide-react';
+import { LayoutDashboard, BarChart2, Newspaper, Settings } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
 interface LayoutProps {
@@ -13,7 +13,6 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'indikatoren', label: 'Indikatoren', icon: BarChart2 },
     { id: 'news', label: 'News', icon: Newspaper },
-    { id: 'alerts', label: 'Alarme', icon: Bell },
   ];
 
   return (
@@ -26,6 +25,15 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
               EINUNDZWANZIG POOL
             </h1>
           </div>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={cn(
+              "p-2 rounded-full transition-colors",
+              activeTab === 'settings' ? "bg-primary/20 text-primary" : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
+            )}
+          >
+            <Settings size={20} />
+          </button>
         </div>
       </header>
 
@@ -38,7 +46,7 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 w-full bg-background/80 backdrop-blur-xl border-t border-outline-variant/15 shadow-[0_-16px_32px_rgba(0,0,0,0.5)] z-50">
-        <div className="flex justify-around items-center px-4 pb-8 pt-4 max-w-md mx-auto w-full font-body">
+        <div className="flex justify-between items-center px-3 pb-8 pt-4 max-w-md mx-auto w-full font-body">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -57,7 +65,7 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                   "flex flex-col items-center justify-center transition-all duration-300 px-4 py-2 rounded-xl cursor-pointer relative",
+                   "flex flex-col items-center justify-center transition-all duration-300 px-2 py-2 mx-1 rounded-xl cursor-pointer relative flex-1 w-full",
                   tabStyle
                 )}
               >

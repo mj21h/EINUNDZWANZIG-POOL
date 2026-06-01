@@ -43,16 +43,9 @@ interface ToastMessage {
   icon?: any;
 }
 
-export default function Alerts() {
+export default function Settings() {
   const [activeTriggers, setActiveTriggers] = useState<Trigger[]>([]);
-  const [dailySummary, setDailySummary] = useState<boolean>(true);
-  const [dailyTime, setDailyTime] = useState<string>("08:00");
-  const [dailyScope, setDailyScope] = useState<'Kompakt' | 'Standard' | 'Maximal'>("Standard");
-  const [dailyFrequency, setDailyFrequency] = useState<'Täglich' | 'Wochentage' | 'Wochenende'>("Täglich");
-  const [isDailySettingsOpen, setIsDailySettingsOpen] = useState<boolean>(false);
-  const [showPreview, setShowPreview] = useState<boolean>(false);
   
-  const [whaleAlerts, setWhaleAlerts] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -63,6 +56,22 @@ export default function Alerts() {
     }
     return false;
   });
+
+  const [notificationPermission, setNotificationPermission] = useState<string>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      return Notification.permission;
+    }
+    return 'unsupported';
+  });
+
+  const [newsPushEnabled, setNewsPushEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('einundzwanzig_news_notifications') === 'true';
+    }
+    return false;
+  });
+
+  const [testNotificationSent, setTestNotificationSent] = useState<boolean>(false);
   
   // Custom trigger form states (Defaulting to German names/labels)
   const [newTitle, setNewTitle] = useState('');
@@ -173,13 +182,12 @@ export default function Alerts() {
     if (savedSettings) {
       try {
         const parsed = JSON.parse(savedSettings);
-        setDailySummary(parsed.dailySummary ?? true);
-        setWhaleAlerts(parsed.whaleAlerts ?? false);
         setSoundEnabled(parsed.soundEnabled ?? true);
-        setDailyTime(parsed.dailyTime ?? "08:00");
-        setDailyScope(parsed.dailyScope ?? "Standard");
-        setDailyFrequency(parsed.dailyFrequency ?? "Täglich");
       } catch (e) {}
+    }
+
+    if (Capacitor.isNativePlatform()) {
+      LocalNotifications.cancel({ notifications: [{ id: 9999 }] }).catch(() => {});
     }
   }, []);
 
@@ -189,47 +197,18 @@ export default function Alerts() {
   };
 
   const saveSettings = async (updated: { 
-    dailySummary: boolean; 
-    whaleAlerts: boolean; 
     soundEnabled: boolean;
-    dailyTime?: string;
-    dailyScope?: 'Kompakt' | 'Standard' | 'Maximal';
-    dailyFrequency?: 'Täglich' | 'Wochentage' | 'Wochenende';
   }) => {
     const fresh = {
-      dailySummary: updated.dailySummary,
-      whaleAlerts: updated.whaleAlerts,
       soundEnabled: updated.soundEnabled,
-      dailyTime: updated.dailyTime !== undefined ? updated.dailyTime : dailyTime,
-      dailyScope: updated.dailyScope !== undefined ? updated.dailyScope : dailyScope,
-      dailyFrequency: updated.dailyFrequency !== undefined ? updated.dailyFrequency : dailyFrequency,
     };
     localStorage.setItem('einundzwanzig_alert_settings', JSON.stringify(fresh));
 
     if (Capacitor.isNativePlatform()) {
       try {
         await LocalNotifications.cancel({ notifications: [{ id: 9999 }] });
-        if (fresh.dailySummary && fresh.dailyTime) {
-          const [hourStr, minStr] = fresh.dailyTime.split(':');
-          const hour = parseInt(hourStr, 10);
-          const minute = parseInt(minStr, 10);
-
-          await LocalNotifications.schedule({
-            notifications: [
-              {
-                id: 9999,
-                title: 'EINUNDZWANZIG POOL',
-                body: 'Dein tägliches Bitcoin Briefing ist bereit! Öffne die App für die aktuellen On-Chain und Kursdetails.',
-                schedule: {
-                  on: { hour, minute },
-                  allowWhileIdle: true
-                }
-              }
-            ]
-          });
-        }
       } catch (e) {
-        console.warn("Failed to schedule daily notification:", e);
+        console.warn("Failed to cancel daily notification:", e);
       }
     }
   };
@@ -369,6 +348,87 @@ export default function Alerts() {
         "Push-Dienst ist simuliert aktiv.",
         "success"
       );
+    }
+  };
+
+  useEffect(() => {
+    if (newsPushEnabled && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((reg) => {
+        console.log('SW register success from mount:', reg.scope);
+      }).catch((err) => {
+        console.warn('SW registration failed on mount:', err);
+      });
+    }
+  }, [newsPushEnabled]);
+
+  const toggleNewsNotifications = async () => {
+    if (typeof window === 'undefined') return;
+
+    if (newsPushEnabled) {
+      setNewsPushEnabled(false);
+      localStorage.setItem('einundzwanzig_news_notifications', 'false');
+    } else {
+      try {
+        let permission = 'denied';
+        if (Capacitor.isNativePlatform()) {
+          const perm = await LocalNotifications.requestPermissions();
+          permission = perm.display;
+        } else if ('Notification' in window) {
+          permission = await Notification.requestPermission();
+        }
+
+        setNotificationPermission(permission);
+        if (permission === 'granted') {
+          setNewsPushEnabled(true);
+          localStorage.setItem('einundzwanzig_news_notifications', 'true');
+          
+          if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.register('/sw.js');
+            if ('periodicSync' in reg) {
+              try {
+                const status = await navigator.permissions.query({
+                  name: 'periodic-background-sync' as any,
+                });
+                if (status.state === 'granted') {
+                  await (reg as any).periodicSync.register('check-news-periodic', {
+                    minInterval: 30 * 60 * 1000,
+                  });
+                }
+              } catch (pe) {}
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error enabling notifications:', err);
+      }
+    }
+  };
+
+  const sendTestNotification = async () => {
+    if (newsPushEnabled) {
+      if (Capacitor.isNativePlatform()) {
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              id: Math.floor(Math.random() * 1000000),
+              title: 'EINUNDZWANZIG POOL',
+              body: 'Benachrichtigungsdienst erfolgreich gestartet! Du wirst nun über neue Artikel informiert.',
+            }
+          ]
+        });
+        setTestNotificationSent(true);
+        setTimeout(() => setTestNotificationSent(false), 5000);
+      } else if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.showNotification('EINUNDZWANZIG POOL', {
+            body: 'Benachrichtigungsdienst erfolgreich gestartet! Du wirst nun über neue Artikel informiert.',
+            icon: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
+            requireInteraction: false
+          });
+          setTestNotificationSent(true);
+          setTimeout(() => setTestNotificationSent(false), 5000);
+        });
+      }
     }
   };
 
@@ -557,7 +617,7 @@ export default function Alerts() {
           onClick={() => {
             const nextSound = !soundEnabled;
             setSoundEnabled(nextSound);
-            saveSettings({ dailySummary, whaleAlerts, soundEnabled: nextSound });
+            saveSettings({ soundEnabled: nextSound });
             showToast(
               nextSound ? "Signaltöne AN" : "Lautlos Modus",
               nextSound ? "Signaltöne für Alarme sind aktiviert." : "App meldet Alarme jetzt lautlos.",
@@ -578,29 +638,75 @@ export default function Alerts() {
       {/* Hero */}
       <div className="space-y-4">
         <div>
-          <h2 className="font-headline font-extrabold text-4xl text-on-surface tracking-tight mb-2">Alarme</h2>
-          <p className="font-body text-on-surface-variant text-sm">Definiere präzise Zielpreise, Unterstützungslevels und Volatilitäts-Alarme.</p>
+          <h2 className="font-headline font-extrabold text-4xl text-on-surface tracking-tight mb-2">Einstellungen</h2>
+          <p className="font-body text-on-surface-variant text-sm">Übersicht deiner Konfigurationen, Benachrichtigungen und Alarmen.</p>
         </div>
         
-        <button 
-          onClick={handleSetPushNotification}
-          className={`w-full p-4 rounded-2xl flex items-center justify-between border transition-all cursor-pointer ${
-            pushEnabled ? 'bg-surface-container border-teal/20' : 'bg-surface-container border-outline-variant/15'
-          }`}
-        >
-          <div className="flex gap-4 items-center">
-            <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-teal">
-              {pushEnabled ? <BellRing size={20} className="animate-bounce" /> : <BellOff size={20} />}
-            </div>
-            <div className="text-left">
-              <h4 className="font-body font-bold text-on-surface text-sm">Push-Mitteilungen</h4>
-              <p className="font-body text-[10px] text-on-surface-variant">Neue Kursziele & Kritische Levels</p>
-            </div>
+        <div className="pt-2">
+          <h3 className="font-body text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-3">Push-Mitteilungen</h3>
+          <div className="space-y-4">
+            
+            {/* Unified Push Toggles */}
+            <button 
+              onClick={async () => {
+                const isCurrentlyEnabled = newsPushEnabled || pushEnabled;
+                if (isCurrentlyEnabled) {
+                  setNewsPushEnabled(false);
+                  setPushEnabled(false);
+                  localStorage.setItem('einundzwanzig_news_notifications', 'false');
+                  localStorage.setItem('einundzwanzig_alert_push_enabled', 'false');
+                } else {
+                  await toggleNewsNotifications();
+                  // Also set pushEnabled for price alerts since they are bound now
+                  setPushEnabled(true);
+                  localStorage.setItem('einundzwanzig_alert_push_enabled', 'true');
+                }
+              }}
+              className={`w-full p-4 rounded-2xl flex items-center justify-between border transition-all cursor-pointer ${
+                (newsPushEnabled || pushEnabled) ? 'bg-surface-container border-teal/20' : 'bg-surface-container border-outline-variant/15'
+              }`}
+            >
+              <div className="flex gap-4 items-center">
+                <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-teal">
+                  {(newsPushEnabled || pushEnabled) ? <BellRing size={20} className="animate-bounce" /> : <BellOff size={20} />}
+                </div>
+                <div className="text-left">
+                  <h4 className="font-body font-bold text-on-surface text-sm">Zulassen</h4>
+                  <p className="font-body text-[10px] text-on-surface-variant">News-Artikel, Kursziele & Kritische Levels</p>
+                </div>
+              </div>
+              <div className={`w-10 h-5 rounded-full relative transition-colors ${newsPushEnabled || pushEnabled ? 'bg-teal' : 'bg-surface-container-highest'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${newsPushEnabled || pushEnabled ? 'left-5.5' : 'left-0.5'}`}></div>
+              </div>
+            </button>
+
+            {notificationPermission === 'denied' && (
+              <div className="bg-error/5 border border-error/15 rounded-xl p-3 text-[11px] text-error flex items-start gap-2 leading-relaxed">
+                <span className="font-bold flex-shrink-0">⚠️ Hinweis:</span>
+                <span>
+                  Benachrichtigungserlaubnis wurde im Browser verweigert. Falls du dich im Vorschau-Fenster befindest, öffne die App über den Button oben rechts in einem separaten Tab, um die Erlaubnis freizugeben.
+                </span>
+              </div>
+            )}
+            
+            {/* Warning/Tips or Test Button */}
+            {(newsPushEnabled || pushEnabled) && (
+              <div className="bg-[#1a1a1a]/40 border border-[#F7931A]/10 rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between text-xs text-on-surface-variant font-body select-none mt-2">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Dienst aktiv • Hintergrundsync eingestellt</span>
+                </div>
+                <button
+                  onClick={sendTestNotification}
+                  disabled={testNotificationSent}
+                  className="text-xs font-bold text-[#F7931A] hover:text-[#ffb353] bg-[#F7931A]/5 hover:bg-[#F7931A]/10 border border-[#F7931A]/20 px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer font-headline"
+                >
+                  {testNotificationSent ? '✓ Test gesendet' : 'Test-Meldung senden'}
+                </button>
+              </div>
+            )}
           </div>
-          <div className={`w-10 h-5 rounded-full relative transition-colors ${pushEnabled ? 'bg-teal' : 'bg-surface-container-highest'}`}>
-            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${pushEnabled ? 'left-5.5' : 'left-0.5'}`}></div>
-          </div>
-        </button>
+        </div>
       </div>
 
       {/* Suggested Targets */}
@@ -646,349 +752,6 @@ export default function Alerts() {
             </div>
             <div className="text-on-surface-variant/75 text-[10px] font-bold group-hover:text-teal flex items-center gap-0.5">
               <span>+ Alarm setzen</span>
-            </div>
-          </button>
-        </div>
-      </section>
-
-      {/* Daily Report */}
-      <section>
-        <h3 className="font-body text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-4">Tägliche Berichte & Entwicklungen</h3>
-        <div className="space-y-3">
-          {/* Toggle Daily Course container */}
-          <div className="w-full bg-[#1a1a1a] rounded-xl border border-outline-variant/10 overflow-hidden transition-all duration-300">
-            {/* Header Accordion triggering settings view */}
-            <div 
-              onClick={() => setIsDailySettingsOpen(!isDailySettingsOpen)}
-              className="p-4 flex items-center justify-between cursor-pointer select-none hover:bg-surface-container-low/20 transition-colors"
-            >
-              <div className="flex gap-4 items-center flex-1">
-                <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-teal">
-                  <Newspaper size={20} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-body font-bold text-on-surface text-sm">Tägliche Kursübersicht</h4>
-                  </div>
-                  <p className="font-body text-[10px] text-on-surface-variant flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    <span className="flex items-center gap-0.5"><Clock size={10} className="text-teal animate-pulse" /> {dailyTime} UTC</span>
-                    <span className="text-on-surface-variant/30">•</span>
-                    <span className="flex items-center gap-0.5"><Calendar size={10} className="text-teal" /> {dailyFrequency}</span>
-                    <span className="text-on-surface-variant/30">•</span>
-                    <span className="flex items-center gap-0.5"><BookOpen size={10} className="text-teal" /> {dailyScope}</span>
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                {/* Main Toggle switch */}
-                <button 
-                  onClick={() => {
-                    const next = !dailySummary;
-                    setDailySummary(next);
-                    saveSettings({ dailySummary: next, whaleAlerts, soundEnabled });
-                    showToast(
-                      next ? "Bericht Aktiviert" : "Bericht Deaktiviert",
-                      next ? `Tägliche Kursübersicht um ${dailyTime} UTC aktiviert.` : "Die tägliche Kursübersicht wurde pausiert.",
-                      next ? "success" : "info",
-                      Newspaper
-                    );
-                  }}
-                  className={`w-10 h-5 rounded-full relative transition-colors cursor-pointer ${dailySummary ? 'bg-teal' : 'bg-surface-container-highest'}`}
-                >
-                  <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${dailySummary ? 'left-5.5' : 'left-0.5'}`}></div>
-                </button>
-
-                {/* Expand Settings button icon (Pencil) */}
-                <button 
-                  onClick={() => setIsDailySettingsOpen(!isDailySettingsOpen)}
-                  className="p-1 rounded-lg text-on-surface-variant/50 hover:text-teal transition-colors cursor-pointer"
-                  title="Einstellungen anpassen"
-                >
-                  <Pencil size={16} className={isDailySettingsOpen ? "text-teal" : ""} />
-                </button>
-              </div>
-            </div>
-
-            {/* Configurable body with expand transition */}
-            <AnimatePresence initial={false}>
-              {isDailySettingsOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="border-t border-outline-variant/10 bg-background/35"
-                >
-                  <div className="p-4.5 space-y-4">
-                    {/* Time selection */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] uppercase tracking-wider text-teal font-extrabold flex items-center gap-1.5 font-body">
-                          <Clock size={12} className="text-teal" /> Sendezeit (UTC)
-                        </label>
-                        <span className="text-[10px] text-on-surface-variant font-mono bg-surface-container-low/40 px-2 py-0.5 rounded">
-                          Ausgelöst um {dailyTime} UTC
-                        </span>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <input 
-                          type="time" 
-                          value={dailyTime}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setDailyTime(val);
-                            saveSettings({ dailySummary, whaleAlerts, soundEnabled, dailyTime: val });
-                          }}
-                          className="bg-[#151515] border border-outline-variant/20 rounded-lg px-3 py-1.5 text-xs text-on-surface focus:outline-none focus:border-teal/50 font-mono"
-                        />
-                        <div className="flex gap-1.5 overflow-x-auto py-1 flex-1 hide-scrollbar">
-                          {["08:00", "12:00", "18:00", "21:00"].map((preset) => (
-                            <button
-                              key={preset}
-                              onClick={() => {
-                                setDailyTime(preset);
-                                saveSettings({ dailySummary, whaleAlerts, soundEnabled, dailyTime: preset });
-                                showToast("Uhrzeit geändert", `Tägliche Kursübersicht auf ${preset} UTC gesetzt.`, "success", Clock);
-                              }}
-                              className={`px-2 py-1 text-[10px] font-mono rounded border transition-all cursor-pointer ${
-                                dailyTime === preset 
-                                  ? "bg-teal/15 text-teal border-teal/40 font-bold" 
-                                  : "bg-[#1f1f1f] text-on-surface-variant/75 border-outline-variant/10 hover:border-outline-variant/30"
-                              }`}
-                            >
-                              {preset}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Frequenz */}
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-wider text-teal font-extrabold flex items-center gap-1.5 font-body">
-                        <Calendar size={12} className="text-teal" /> Sende-Frequenz
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(["Täglich", "Wochentage", "Wochenende"] as const).map((freq) => (
-                          <button
-                            key={freq}
-                            onClick={() => {
-                              setDailyFrequency(freq);
-                              saveSettings({ dailySummary, whaleAlerts, soundEnabled, dailyFrequency: freq });
-                              showToast("Frequenz geändert", `Wird nun ${freq.toLowerCase()} versendet.`, "success", Calendar);
-                            }}
-                            className={`py-2 text-[10px] rounded-lg border text-center transition-all cursor-pointer font-bold ${
-                              dailyFrequency === freq 
-                                ? "bg-primary/10 text-primary border-primary/40" 
-                                : "bg-[#151515] text-on-surface-variant/80 border-outline-variant/10 hover:border-outline-variant/30"
-                            }`}
-                          >
-                            {freq}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Berichtsumfang */}
-                    <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-wider text-teal font-extrabold flex items-center gap-1.5 font-body">
-                        <BookOpen size={12} className="text-teal" /> Berichtsumfang
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(["Kompakt", "Standard", "Maximal"] as const).map((scope) => (
-                          <button
-                            key={scope}
-                            onClick={() => {
-                              setDailyScope(scope);
-                              saveSettings({ dailySummary, whaleAlerts, soundEnabled, dailyScope: scope });
-                              showToast("Berichtsumfang geändert", `Umfang auf '${scope}' gesetzt.`, "success", BookOpen);
-                            }}
-                            className={`py-2 px-1 text-[10px] rounded-lg border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-                              dailyScope === scope 
-                                ? "bg-teal/10 text-teal border-teal/40 font-black" 
-                                : "bg-[#151515] text-on-surface-variant/80 border-outline-variant/10 hover:border-outline-variant/30"
-                            }`}
-                          >
-                            <span className="font-bold">{scope}</span>
-                            <span className="text-[7.5px] uppercase opacity-60 tracking-wider mt-0.5">
-                              {scope === "Kompakt" ? "Nur Kurs" : scope === "Standard" ? "Kurs & Pool" : "On-chain"}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Interactive Preview Container */}
-                    <div className="pt-2 border-t border-outline-variant/10 space-y-3">
-                      <button
-                        onClick={() => setShowPreview(!showPreview)}
-                        className="w-full py-2.5 bg-[#1b1b1b] hover:bg-[#222] border border-outline-variant/15 text-[10px] tracking-wider uppercase font-black text-on-surface flex items-center justify-center gap-1.5 rounded-lg active:scale-98 transition-all cursor-pointer"
-                      >
-                        <Newspaper size={12} className="text-teal" />
-                        <span>{showPreview ? "Vorschau ausblenden" : "Berichtsvorschau einblenden"}</span>
-                      </button>
-
-                      <AnimatePresence>
-                        {showPreview && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -8, height: 0 }}
-                            animate={{ opacity: 1, y: 0, height: "auto" }}
-                            exit={{ opacity: 0, y: -8, height: 0 }}
-                            className="bg-[#0b0b0b] rounded-xl border border-primary/20 overflow-hidden shadow-2xl relative"
-                          >
-                            {/* Accent badge */}
-                            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-teal via-primary to-primary" />
-                            
-                            <div className="p-4 space-y-3 text-left">
-                              {/* Preview Header */}
-                              <div className="flex justify-between items-start border-b border-outline-variant/15 pb-2.5">
-                                <div>
-                                  <h5 className="font-logo font-black tracking-widest text-[#F7931A] text-xs uppercase leading-none">
-                                    EINUNDZWANZIG POOL
-                                  </h5>
-                                  <p className="font-body text-[8px] uppercase tracking-wider text-teal font-extrabold mt-1">
-                                    TÄGLICHES BRIEFING • {dailyFrequency.toUpperCase()}
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <span className="font-mono text-[9px] uppercase tracking-widest text-on-surface-variant/90 block">
-                                    {dailyTime} UTC
-                                  </span>
-                                  <span className="font-body text-[7px] text-teal block font-semibold">
-                                    STATUS: SYSTEMBEREIT
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Preview content depending on dailyScope */}
-                              <div className="space-y-3 font-body text-xs text-on-surface/95">
-                                {/* Section 1: Always there */}
-                                <div className="space-y-1 bg-[#1a1a1a]/40 p-2.5 rounded-lg border border-outline-variant/5">
-                                  <p className="font-body text-[9px] uppercase tracking-widest text-[#F7931A] font-black">
-                                    📊 Marktübersicht
-                                  </p>
-                                  <div className="flex justify-between items-baseline pt-0.5">
-                                    <span className="font-headline font-extrabold text-[15px] text-white">$73.420</span>
-                                    <span className="text-emerald-400 font-bold text-[10px] font-headline">+2.45% (24H)</span>
-                                  </div>
-                                  <p className="text-[9.5px] leading-relaxed text-on-surface-variant mt-1">
-                                    Bitcoin behauptet sich über dem gleitenden Durchschnitt. Volumen im 24h-Trend zeigt stabile Akkumulation über Spotbörsen.
-                                  </p>
-                                </div>
-
-                                {/* Section 2: Standard & Maximal */}
-                                {dailyScope !== "Kompakt" && (
-                                  <div className="space-y-1 bg-[#1a1a1a]/40 p-2.5 rounded-lg border border-outline-variant/5">
-                                    <p className="font-body text-[9px] uppercase tracking-widest text-teal font-black">
-                                      ⛏️ Pool- & Netzwerkstatus
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-2 pt-0.5 text-[9px]">
-                                      <div>
-                                        <span className="text-on-surface-variant block uppercase text-[7px]">Pool-Hashrate:</span>
-                                        <span className="font-headline font-bold text-on-surface text-xs">612.4 EH/s</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-on-surface-variant block uppercase text-[7px]">Schwierigkeit:</span>
-                                        <span className="font-headline font-bold text-teal text-xs">+1.25% (in 6t)</span>
-                                      </div>
-                                    </div>
-                                    <p className="text-[9px] leading-relaxed text-on-surface-variant mt-1.5">
-                                      Unsere Miner-Beteiligungen laufen mit maximaler Rentabilität. Aktuelle Blockzeit im Durchschnitt bei 9m 48s.
-                                    </p>
-                                  </div>
-                                )}
-
-                                {/* Section 3: Maximal only */}
-                                {dailyScope === "Maximal" && (
-                                  <div className="space-y-1 bg-[#1a1a1a]/40 p-2.5 rounded-lg border border-teal/10">
-                                    <div className="flex justify-between items-center">
-                                      <p className="font-body text-[9px] uppercase tracking-widest text-[#F7931A] font-black">
-                                        🔗 On-Chain & Mempool
-                                      </p>
-                                      <span className="text-[7px] text-[#F7931A] font-mono font-bold uppercase tracking-widest animate-pulse">
-                                        Whales Aktiv
-                                      </span>
-                                    </div>
-                                    <p className="text-[9.5px] leading-relaxed text-on-surface-variant pt-0.5">
-                                      3 Groß-Wal-Aktivitäten (&gt;1.200 BTC) im Block 895.422 bestätigt. Gebührenniveau bleibt bei ca. <span className="text-teal font-bold font-mono">14 sat/vB</span> niedrig für UTXO-Konsolidierungen.
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Simulation Button */}
-                              <div className="pt-2 border-t border-outline-variant/15 flex gap-2">
-                                <button
-                                  onClick={() => {
-                                    if (Capacitor.isNativePlatform()) {
-                                      LocalNotifications.schedule({
-                                        notifications: [
-                                          {
-                                            id: Math.floor(Math.random() * 1000000),
-                                            title: 'EINUNDZWANZIG POOL',
-                                            body: `Tägliches Briefing (${dailyScope})! Bitcoin Kurs ist stabil.`,
-                                          }
-                                        ]
-                                      });
-                                    } else if ('Notification' in window && Notification.permission === 'granted') {
-                                      navigator.serviceWorker.ready.then(reg => {
-                                        reg.showNotification('EINUNDZWANZIG POOL', {
-                                          body: 'Tägliches Briefing simuliert!',
-                                          icon: 'https://images.unsplash.com/photo-1518546305927-5a555bb7020d?q=80&w=128&h=128&fit=crop',
-                                        });
-                                      });
-                                    }
-                                    
-                                    showToast(
-                                      "Test-Briefing gesendet",
-                                      `Simulierter Bericht (${dailyScope}) erfolgreich ausgeliefert!`,
-                                      "success",
-                                      Newspaper
-                                    );
-                                  }}
-                                  className="flex-1 py-1.5 bg-[#F7931A]/10 hover:bg-[#F7931A]/20 border border-[#F7931A]/25 text-[#F7931A] text-[9px] tracking-widest uppercase font-black rounded-md transition-colors active:scale-95 cursor-pointer text-center"
-                                >
-                                  ⚡ Test-Bericht auslösen
-                                </button>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Toggle Whale Activity */}
-          <button 
-            onClick={() => {
-              const next = !whaleAlerts;
-              setWhaleAlerts(next);
-              saveSettings({ dailySummary, whaleAlerts: next, soundEnabled });
-              showToast(
-                next ? "Wal-Melder aktiv" : "Wal-Melder stumm",
-                next ? "Echtzeitalarm bei Whale-Transaktionen über 1.000 BTC scharfgeschaltet." : "Überwachung von Großtransaktionen wurde deaktiviert.",
-                next ? "success" : "info",
-                Waves
-              );
-            }}
-            className="w-full bg-[#1a1a1a] rounded-xl p-4 flex items-center justify-between border border-outline-variant/10 cursor-pointer text-left focus:outline-none"
-          >
-            <div className="flex gap-4 items-center">
-              <div className="w-10 h-10 rounded-xl bg-surface-container-high flex items-center justify-center text-teal">
-                <Waves size={20} />
-              </div>
-              <div>
-                <h4 className="font-body font-bold text-on-surface text-sm">Wal-Aktivitätsalarme</h4>
-                <p className="font-body text-[10px] text-on-surface-variant">Institutionelle Zuflüsse &gt; 1.000 BTC</p>
-              </div>
-            </div>
-            <div className={`w-10 h-5 rounded-full relative transition-colors ${whaleAlerts ? 'bg-teal' : 'bg-surface-container-highest'}`}>
-              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${whaleAlerts ? 'left-5.5' : 'left-0.5'}`}></div>
             </div>
           </button>
         </div>
