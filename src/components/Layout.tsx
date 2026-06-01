@@ -18,7 +18,10 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-outline-variant/30">
+      <header 
+        className="fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-outline-variant/30"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         <div className="flex justify-between items-center px-6 h-16 max-w-md mx-auto w-full">
           <div className="flex items-center">
             <h1 className="font-logo font-black text-lg text-white uppercase tracking-wider mt-0.5">
@@ -41,15 +44,24 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 pt-20 pb-32">
+      <main 
+        className="flex-1"
+        style={{ 
+          paddingTop: 'calc(5rem + env(safe-area-inset-top))', 
+          paddingBottom: 'calc(8rem + env(safe-area-inset-bottom))' 
+        }}
+      >
         <div className="max-w-md mx-auto">
           {children}
         </div>
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 w-full bg-background/80 backdrop-blur-xl border-t border-outline-variant/15 shadow-[0_-16px_32px_rgba(0,0,0,0.5)] z-50">
-        <div className="flex justify-between items-center px-3 pb-8 pt-4 max-w-md mx-auto w-full font-body">
+      <nav 
+        className="fixed bottom-0 left-0 w-full bg-background/80 backdrop-blur-xl border-t border-outline-variant/15 shadow-[0_-16px_32px_rgba(0,0,0,0.5)] z-50"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="flex justify-between items-center px-3 pb-6 pt-4 max-w-md mx-auto w-full font-body">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

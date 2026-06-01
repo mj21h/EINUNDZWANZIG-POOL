@@ -37,8 +37,9 @@
 }
 
 @layer base {
-  body {
+  html, body {
     @apply bg-background text-on-surface font-body antialiased;
+    background-color: var(--color-background);
   }
 }
 

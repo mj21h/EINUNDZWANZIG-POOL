@@ -714,42 +714,42 @@ export default function Settings() {
           <h3 className="font-body text-[10px] uppercase tracking-[0.2em] text-teal font-bold">Vorgeschlagene Kursziele</h3>
           <span className="font-body text-[9px] text-on-surface-variant/60 font-medium">Systemanalyse: Hohe Relevanz</span>
         </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-6 px-6 hide-scrollbar">
+        <div className="grid grid-cols-3 gap-2 pb-2">
           <button 
             onClick={() => addSuggestedAlert("Widerstand 1", "$82.400", "primary")}
-            className="flex-shrink-0 w-[8.5rem] bg-[#1a1a1a] border border-primary/10 hover:border-primary/40 rounded-xl p-3.5 active:scale-95 transition-all text-left cursor-pointer group"
+            className="bg-[#1a1a1a] border border-primary/10 hover:border-primary/40 rounded-xl p-2 sm:p-3 active:scale-95 transition-all text-left cursor-pointer group flex flex-col justify-between"
           >
-            <p className="font-body text-[9px] text-primary font-black uppercase mb-1">Widerstand 1</p>
+            <p className="font-body text-[8px] sm:text-[9px] text-primary font-black uppercase mb-1 truncate">Widerstand 1</p>
             <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="font-headline font-extrabold text-lg text-on-surface group-hover:text-primary transition-colors">$82.400</span>
+              <span className="font-headline font-extrabold text-[15px] sm:text-lg text-on-surface group-hover:text-primary transition-colors">$82.400</span>
             </div>
-            <div className="text-on-surface-variant/75 text-[10px] font-bold group-hover:text-primary flex items-center gap-0.5">
+            <div className="text-on-surface-variant/75 text-[9px] sm:text-[10px] font-bold group-hover:text-primary flex items-center gap-0.5 truncate">
               <span>+ Alarm setzen</span>
             </div>
           </button>
 
           <button 
             onClick={() => addSuggestedAlert("Wichtiger Support", "$74.800", "tertiary")}
-            className="flex-shrink-0 w-[8.5rem] bg-[#1a1a1a] border border-teal/10 hover:border-teal/40 rounded-xl p-3.5 active:scale-95 transition-all text-left cursor-pointer group"
+            className="bg-[#1a1a1a] border border-teal/10 hover:border-teal/40 rounded-xl p-2 sm:p-3 active:scale-95 transition-all text-left cursor-pointer group flex flex-col justify-between"
           >
-            <p className="font-body text-[9px] text-teal font-black uppercase mb-1">Support 1</p>
+            <p className="font-body text-[8px] sm:text-[9px] text-teal font-black uppercase mb-1 truncate">Support 1</p>
             <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="font-headline font-extrabold text-lg text-on-surface group-hover:text-teal transition-colors">$74.800</span>
+              <span className="font-headline font-extrabold text-[15px] sm:text-lg text-on-surface group-hover:text-teal transition-colors">$74.800</span>
             </div>
-            <div className="text-on-surface-variant/75 text-[10px] font-bold group-hover:text-teal flex items-center gap-0.5">
+            <div className="text-on-surface-variant/75 text-[9px] sm:text-[10px] font-bold group-hover:text-teal flex items-center gap-0.5 truncate">
               <span>+ Alarm setzen</span>
             </div>
           </button>
 
           <button 
             onClick={() => addSuggestedAlert("Gap-Fill Unterstützung", "$68.200", "error")}
-            className="flex-shrink-0 w-[8.5rem] bg-[#1a1a1a] border border-teal/10 hover:border-teal/40 rounded-xl p-3.5 active:scale-95 transition-all text-left cursor-pointer group"
+            className="bg-[#1a1a1a] border border-teal/10 hover:border-teal/40 rounded-xl p-2 sm:p-3 active:scale-95 transition-all text-left cursor-pointer group flex flex-col justify-between"
           >
-            <p className="font-body text-[9px] text-teal font-black uppercase mb-1">Gap-Fill</p>
+            <p className="font-body text-[8px] sm:text-[9px] text-teal font-black uppercase mb-1 truncate">Gap-Fill</p>
             <div className="flex items-baseline gap-1 mb-1.5">
-              <span className="font-headline font-extrabold text-lg text-on-surface group-hover:text-teal transition-colors">$68.200</span>
+              <span className="font-headline font-extrabold text-[15px] sm:text-lg text-on-surface group-hover:text-teal transition-colors">$68.200</span>
             </div>
-            <div className="text-on-surface-variant/75 text-[10px] font-bold group-hover:text-teal flex items-center gap-0.5">
+            <div className="text-on-surface-variant/75 text-[9px] sm:text-[10px] font-bold group-hover:text-teal flex items-center gap-0.5 truncate">
               <span>+ Alarm setzen</span>
             </div>
           </button>
