@@ -26,7 +26,10 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
             </h1>
           </div>
           <button 
-            onClick={() => setActiveTab('settings')}
+            onClick={() => {
+              setActiveTab('settings');
+              window.scrollTo({ top: 0, behavior: 'auto' });
+            }}
             className={cn(
               "p-2 rounded-full transition-colors",
               activeTab === 'settings' ? "bg-primary/20 text-primary" : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container"
@@ -63,7 +66,10 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  window.scrollTo({ top: 0, behavior: 'auto' });
+                }}
                 className={cn(
                    "flex flex-col items-center justify-center transition-all duration-300 px-2 py-2 mx-1 rounded-xl cursor-pointer relative flex-1 w-full",
                   tabStyle

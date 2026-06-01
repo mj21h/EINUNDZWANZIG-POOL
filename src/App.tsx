@@ -15,22 +15,23 @@ export default function App() {
   const [showPushPrompt, setShowPushPrompt] = useState(false);
 
   useEffect(() => {
-    const checkNotificationPermission = async () => {
-      // Don't show immediately on first load, wait a few seconds so it feels natural
-      setTimeout(async () => {
-        let currentPermission = 'default';
-        if (Capacitor.isNativePlatform()) {
-          const perm = await LocalNotifications.checkPermissions();
-          currentPermission = perm.display;
-        } else if ('Notification' in window) {
-          currentPermission = Notification.permission;
-        }
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [activeTab]);
 
-        const hasPrompted = localStorage.getItem('einundzwanzig_push_prompted');
-        if (currentPermission === 'default' && !hasPrompted) {
-          setShowPushPrompt(true);
-        }
-      }, 3000);
+  useEffect(() => {
+    const checkNotificationPermission = async () => {
+      let currentPermission = 'default';
+      if (Capacitor.isNativePlatform()) {
+        const perm = await LocalNotifications.checkPermissions();
+        currentPermission = perm.display;
+      } else if ('Notification' in window) {
+        currentPermission = Notification.permission;
+      }
+
+      const hasPrompted = localStorage.getItem('einundzwanzig_push_prompted');
+      if (currentPermission === 'default' && !hasPrompted) {
+        setShowPushPrompt(true);
+      }
     };
     checkNotificationPermission();
   }, []);

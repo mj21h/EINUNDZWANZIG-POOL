@@ -79,6 +79,7 @@ export default function Settings() {
   const [newLabel, setNewLabel] = useState('Benutzerdefiniertes Level');
   const [newIconType, setNewIconType] = useState<'crosshair' | 'alert' | 'zap'>('crosshair');
   const [newColor, setNewColor] = useState<'primary' | 'tertiary' | 'error'>('primary');
+  const [newCurrency, setNewCurrency] = useState<'USD' | 'EUR'>('USD');
 
   const [usdPrice, setUsdPrice] = useState<number>(0);
   const [eurPrice, setEurPrice] = useState<number>(0);
@@ -471,11 +472,11 @@ export default function Settings() {
     // Strip trailing $ or € for easier editing, or just keep it
     let cleanPrice = trig.price.replace(/[$€]/g, '').trim();
     if (trig.price.endsWith('€') || trig.price.includes('€') || trig.label.includes('EUR')) {
-      // Just keep as is but stripped symbols are nicer for inputs, actually it's a text input.
-      // We can just keep the original string and let the user edit it.
       setNewPrice(cleanPrice);
+      setNewCurrency('EUR');
     } else {
       setNewPrice(cleanPrice);
+      setNewCurrency('USD');
     }
     
     setNewLabel(trig.label);
@@ -505,11 +506,9 @@ export default function Settings() {
       return;
     }
 
-    // Clean formatting on custom price (either append the user's string directly)
-    let formattedPrice = newPrice.trim();
-    if (!formattedPrice.startsWith('$') && !formattedPrice.startsWith('€') && !formattedPrice.endsWith('€') && !formattedPrice.endsWith('$')) {
-      formattedPrice = `$${formattedPrice}`;
-    }
+    // Clean formatting on custom price
+    let cleanPrice = newPrice.trim().replace(/[$€]/g, '').trim();
+    let formattedPrice = newCurrency === 'USD' ? `$${cleanPrice}` : `${cleanPrice}€`;
 
     const newTrig: Trigger = {
       id: editingTriggerId || ('custom-' + Date.now().toString()),
@@ -866,9 +865,9 @@ export default function Settings() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-[1fr,80px] gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Zielkurs (z.B. 81200)</label>
+                    <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Zielkurs</label>
                     <input 
                       type="text" 
                       placeholder="z.B. 81200"
@@ -880,14 +879,26 @@ export default function Settings() {
                   </div>
                   
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Beschreibung / Label</label>
-                    <input 
-                      type="text" 
-                      value={newLabel}
-                      onChange={(e) => setNewLabel(e.target.value)}
-                      className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:border-teal/50 transition-colors font-body"
-                    />
+                    <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Währung</label>
+                    <select
+                      value={newCurrency}
+                      onChange={(e: any) => setNewCurrency(e.target.value)}
+                      className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-3 py-2.5 text-xs text-on-surface focus:outline-none focus:border-teal/50 transition-colors cursor-pointer font-body"
+                    >
+                      <option value="USD">$</option>
+                      <option value="EUR">€</option>
+                    </select>
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Beschreibung / Label</label>
+                  <input 
+                    type="text" 
+                    value={newLabel}
+                    onChange={(e) => setNewLabel(e.target.value)}
+                    className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:border-teal/50 transition-colors font-body"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
