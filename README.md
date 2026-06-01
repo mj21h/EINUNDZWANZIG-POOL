@@ -21,11 +21,11 @@ Eine kuratierte Auswahl an relevanten und bewährten Metriken, um die Marktphase
 ### 📰 Ungefiltertes Signal
 Integrierter, kuratierter News-Feed aus dem Herzen der deutschsprachigen Bitcoin-Community (u.a. Blocktrainer). Keine Zeitverschwendung mit irrelevanten Krypto-Ablenkungen, nur reine Bitcoin-Informationen.
 
-### 🔔 Präzise Alarme & Benachrichtigungen
-Bleib Herr deiner Zeit. Verpasse keine wichtigen Makro-Bewegungen mehr:
+### ⚙️ Zentrale Einstellungen & Benachrichtigungen
+Bleib Herr deiner Zeit. Unter den Einstellungen verwaltest du alle deine Parameter und verpasst keine wichtigen Informationen:
+- **Zentrale Push-Mitteilungen**: Eine gebündelte Steuerung für News-Updates und Kurs-Alarme.
 - **Custom Price Alerts**: Setze Alarme für deine individuellen Support- und Widerstandszonen.
-- **Tägliches Markt-Briefing**: Kompakte Zusammenfassungen der Marktlage direkt aufs Smartphone.
-- **Native Push-Mitteilungen**: Funktionierende Benachrichtigungen auf Android, ohne Umwege.
+- **Native Push-Mitteilungen**: Funktionierende Benachrichtigungen auf Endgeräten mit Opt-In beim Start der App.
 
 ---
 
