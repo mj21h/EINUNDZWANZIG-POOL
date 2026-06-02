@@ -1,6 +1,6 @@
 # EINUNDZWANZIG POOL 🌋
 
-Die ultimative Kommandozentrale für Bitcoiner. Ohne Rauschen, ohne Altcoins – reines Signal. 
+Die ultimative Kommandozentrale für Bitcoiner. Bitcoin only, ohne Altcoins.
 
 Einundzwanzig Pool ist ein professionelles, fokussiertes Dashboard für Marktanalysen, wesentliche Metriken und aktuelle Entwicklungen rund um das härteste Geld der Welt. Don't trust, verify.
 
