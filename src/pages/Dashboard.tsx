@@ -408,7 +408,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="px-6 space-y-8 pb-10">
+    <div className="px-3 space-y-8 pb-10">
       {/* Live Market Price Widget */}
       <section className="space-y-2">
         <div className="flex justify-between items-center w-full">
@@ -465,7 +465,7 @@ export default function Dashboard() {
       </section>
 
       {/* Live Chart Container */}
-      <div className="w-full h-64 bg-[#1a1a1a] border border-outline-variant/10 rounded-2xl relative overflow-hidden p-5 flex flex-col justify-between">
+      <div className="w-full h-64 bg-[#1a1a1a] border border-outline-variant/10 rounded-2xl relative overflow-hidden p-3 flex flex-col justify-between">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-10 font-body text-xs">
           <span className="bg-surface-container/85 backdrop-blur border border-outline-variant/15 px-3 py-1.5 rounded-xl font-bold text-on-surface tracking-wide shrink-0">
             {selectedInterval === '24h' && `24h Preisverlauf (${currency})`}
@@ -547,7 +547,7 @@ export default function Dashboard() {
       </div>
 
       {/* Live-Briefing & Netzwerkstatus Section */}
-      <section className="bg-surface-container-low border border-outline-variant/10 rounded-2xl p-5 space-y-4">
+      <section className="bg-surface-container-low border border-outline-variant/10 rounded-2xl p-3 space-y-4">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2.5">
@@ -655,7 +655,7 @@ export default function Dashboard() {
                   <button 
                     id={`entry-btn-${index}`}
                     onClick={() => setIsAdoptionOpen(!isAdoptionOpen)}
-                    className="w-full text-left p-4 flex items-center justify-between gap-4 bg-surface-container/30 transition-colors hover:bg-surface-container/60 cursor-pointer"
+                    className="w-full text-left p-3 flex items-center justify-between gap-4 bg-surface-container/30 transition-colors hover:bg-surface-container/60 cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/10 flex items-center justify-center text-lg shadow-inner">
@@ -689,7 +689,7 @@ export default function Dashboard() {
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                         className="overflow-hidden bg-surface-container/10"
                       >
-                        <div className="p-4 border-t border-outline-variant/5">
+                        <div className="p-3 border-t border-outline-variant/5">
                           <img 
                             src={adoptionImageBase64} 
                             alt="5 Phasen der Bitcoin-Adoption" 
@@ -709,7 +709,7 @@ export default function Dashboard() {
                   href={entry.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block bg-surface-container-low border border-outline-variant/10 hover:border-outline-variant/25 rounded-2xl p-4 flex items-center justify-between gap-4 transition-all duration-250 hover:translate-x-0.5"
+                  className="block bg-surface-container-low border border-outline-variant/10 hover:border-outline-variant/25 rounded-2xl p-3 flex items-center justify-between gap-4 transition-all duration-250 hover:translate-x-0.5"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/10 flex items-center justify-center text-lg shadow-inner">
@@ -735,7 +735,7 @@ export default function Dashboard() {
       </section>
 
       {/* Dynamic Bitcoin-Only Quote Section at bottom */}
-      <section className="pt-12 pb-14 mt-6 border-t border-outline-variant/10 flex flex-col items-center justify-center text-center px-4 relative overflow-hidden">
+      <section className="pt-12 pb-14 mt-6 border-t border-outline-variant/10 flex flex-col items-center justify-center text-center px-2 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
         
         {/* Quote symbol */}

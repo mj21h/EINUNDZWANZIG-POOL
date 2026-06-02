@@ -6,6 +6,18 @@ Einundzwanzig Pool ist ein professionelles, fokussiertes Dashboard für Marktana
 
 ---
 
+## 📸 Screenshots & Vorschau
+
+<p align="center">
+  <img src="https://images.unsplash.com/photo-1518546305927-5a555bb7020d?auto=format&fit=crop&q=80&w=250&h=500" alt="Dashboard" style="margin: 0 10px; border-radius: 12px;"/>
+  <img src="https://images.unsplash.com/photo-1621504450181-5c3b177e034e?auto=format&fit=crop&q=80&w=250&h=500" alt="News" style="margin: 0 10px; border-radius: 12px;"/>
+  <img src="https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&q=80&w=250&h=500" alt="Einstellungen" style="margin: 0 10px; border-radius: 12px;"/>
+</p>
+
+*Beispielhafte Ansichten der Applikation (Dashboard, Bitcoin News-Feed, Einstellungen & Preis-Alarme).*
+
+---
+
 ## 🚀 Kernfunktionen
 
 ### 📊 Souveränes Dashboard

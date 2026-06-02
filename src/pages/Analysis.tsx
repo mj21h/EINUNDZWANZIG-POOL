@@ -49,7 +49,7 @@ const indicators: Indicator[] = [
 
 export default function Analysis() {
   return (
-    <div className="px-6 space-y-8 pb-10">
+    <div className="px-3 space-y-8 pb-10">
       {/* Title Section */}
       <section className="space-y-3">
         <div className="flex items-center gap-2">
@@ -81,7 +81,7 @@ export default function Analysis() {
               className={`bg-[#1a1a1a] border border-outline-variant/10 rounded-2xl overflow-hidden transition-all duration-300 ${borderClass} hover:shadow-lg`}
             >
               {/* Header with Name & Icon */}
-              <div className="px-5 pt-4.5 pb-1 flex items-center gap-2.5">
+              <div className="px-3 pt-4.5 pb-1 flex items-center gap-2.5">
                 {indicator.icon}
                 <span className={`font-headline font-bold text-base text-on-surface leading-snug`}>
                   {indicator.name}
@@ -89,7 +89,7 @@ export default function Analysis() {
               </div>
 
               {/* Body Description & Link Button */}
-              <div className="px-5 pb-4.5 pt-1 flex flex-col gap-3.5">
+              <div className="px-3 pb-4.5 pt-1 flex flex-col gap-3.5">
                 <p className="text-xs text-on-surface-variant leading-relaxed">
                   {indicator.desc}
                 </p>
@@ -112,7 +112,7 @@ export default function Analysis() {
       {/* External Additional Resources Section */}
       <section className="bg-[#1a1a1a] border border-outline-variant/10 rounded-2xl overflow-hidden transition-all duration-300 hover:border-teal/30 hover:shadow-lg">
         {/* Header with Name & Icon */}
-        <div className="px-5 pt-4.5 pb-1 flex items-center gap-2.5">
+        <div className="px-3 pt-4.5 pb-1 flex items-center gap-2.5">
           <Youtube size={18} className="text-teal flex-shrink-0" />
           <span className="font-headline font-bold text-base text-on-surface leading-snug">
             Weitere Daten &amp; Chart-Analysen
@@ -120,7 +120,7 @@ export default function Analysis() {
         </div>
 
         {/* Body Description & Link Button */}
-        <div className="px-5 pb-4.5 pt-1 flex flex-col gap-3.5">
+        <div className="px-3 pb-4.5 pt-1 flex flex-col gap-3.5">
           <p className="text-xs text-on-surface-variant leading-relaxed">
             Langfristige Prognosen im zeitlichen Kontext. Umfangreiche Modellrechnungen, logarithmische Kurvenvergleiche und spannende Analysen, die tiefgehender an die regulären mathematischen Indikatoren heranreichen.
           </p>

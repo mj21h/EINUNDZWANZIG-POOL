@@ -22,7 +22,7 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
         className="fixed top-0 w-full z-50 bg-background/90 backdrop-blur-md border-b border-outline-variant/30"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
-        <div className="flex justify-between items-center px-6 h-16 max-w-md mx-auto w-full">
+        <div className="flex justify-between items-center px-3 h-16 max-w-md mx-auto w-full">
           <div className="flex items-center">
             <h1 className="font-logo font-black text-lg text-white uppercase tracking-wider mt-0.5">
               EINUNDZWANZIG POOL

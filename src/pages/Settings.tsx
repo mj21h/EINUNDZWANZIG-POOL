@@ -553,10 +553,10 @@ export default function Settings() {
   };
 
   return (
-    <div className="px-6 space-y-8 relative">
+    <div className="px-3 space-y-8 relative">
       
       {/* Dynamic Animated Toasts Overlay (iOS and Biocore Tech Style) */}
-      <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 space-y-2 pointer-events-none">
+      <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-2 space-y-2 pointer-events-none">
         <AnimatePresence>
           {toasts.map((toast) => {
             const ToastIcon = toast.icon || CheckCircle2;
@@ -571,7 +571,7 @@ export default function Settings() {
                 initial={{ opacity: 0, y: -40, scale: 0.92 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.85, y: -20, transition: { duration: 0.15 } }}
-                className={`w-full pointer-events-auto bg-[#1a1a1a]/95 backdrop-blur-xl border ${borderGlow} rounded-2xl p-4 flex gap-3.5 items-center overflow-hidden`}
+                className={`w-full pointer-events-auto bg-[#1a1a1a]/95 backdrop-blur-xl border ${borderGlow} rounded-2xl p-3 flex gap-3.5 items-center overflow-hidden`}
               >
                 {/* Audio pulse line wrapper */}
                 <div className={`absolute top-0 left-0 h-[3px] bg-gradient-to-r from-teal to-primary w-full animate-[shrink-bar_4.5s_linear_forwards]`} />
@@ -602,7 +602,7 @@ export default function Settings() {
       </div>
 
       {/* Live Pulse Header */}
-      <div className="flex justify-between items-center bg-[#1a1a1a]/45 px-4 py-2 rounded-full border border-outline-variant/10">
+      <div className="flex justify-between items-center bg-[#1a1a1a]/45 px-3 py-2 rounded-full border border-outline-variant/10">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
@@ -661,7 +661,7 @@ export default function Settings() {
                   localStorage.setItem('einundzwanzig_alert_push_enabled', 'true');
                 }
               }}
-              className={`w-full p-4 rounded-2xl flex items-center justify-between border transition-all cursor-pointer ${
+              className={`w-full p-3 rounded-2xl flex items-center justify-between border transition-all cursor-pointer ${
                 (newsPushEnabled || pushEnabled) ? 'bg-surface-container border-teal/20' : 'bg-surface-container border-outline-variant/15'
               }`}
             >
@@ -690,7 +690,7 @@ export default function Settings() {
             
             {/* Warning/Tips or Test Button */}
             {(newsPushEnabled || pushEnabled) && (
-              <div className="bg-[#1a1a1a]/40 border border-[#F7931A]/10 rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between text-xs text-on-surface-variant font-body select-none mt-2">
+              <div className="bg-[#1a1a1a]/40 border border-[#F7931A]/10 rounded-2xl p-3 flex flex-wrap gap-3 items-center justify-between text-xs text-on-surface-variant font-body select-none mt-2">
                 <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span>Dienst aktiv • Hintergrundsync eingestellt</span>
@@ -807,11 +807,8 @@ export default function Settings() {
                       </button>
                     </div>
                   </div>
-                  <div className="flex items-baseline gap-2 mb-1.5">
-                    <span className="font-headline font-extrabold text-2xl text-on-surface leading-none">{trig.price}</span>
-                  </div>
                   <div className="flex justify-between items-center">
-                    <span className="font-body text-[10px] text-on-surface-variant font-medium">{trig.label}</span>
+                    <span className="font-headline font-extrabold text-2xl text-on-surface leading-none">{trig.price}</span>
                     <span className={`px-2 py-0.5 rounded-md font-body text-[8px] font-bold uppercase tracking-wider ${badgeBgClass}`}>
                       {translateStatus(trig.status)}
                     </span>
@@ -843,7 +840,7 @@ export default function Settings() {
               transition={{ type: "spring", stiffness: 350, damping: 28 }}
               className="bg-surface-container border border-outline-variant/35 rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-10 hide-scrollbar"
             >
-              <div className="px-5 py-4 bg-surface-container-high/60 border-b border-outline-variant/15 flex justify-between items-center">
+              <div className="px-3 py-4 bg-surface-container-high/60 border-b border-outline-variant/15 flex justify-between items-center">
                 <span className="font-headline font-extrabold text-sm uppercase tracking-wider text-teal">
                   {editingTriggerId ? 'Alarm bearbeiten' : 'Benutzerdefinierter Alarm'}
                 </span>
@@ -852,7 +849,7 @@ export default function Settings() {
                 </button>
               </div>
 
-              <form onSubmit={handleCreateCustomTrigger} className="p-5 space-y-4">
+              <form onSubmit={handleCreateCustomTrigger} className="p-3 space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Titel des Preis-Levels</label>
                   <input 
@@ -873,7 +870,7 @@ export default function Settings() {
                       placeholder="z.B. 81200"
                       value={newPrice}
                       onChange={(e) => setNewPrice(e.target.value)}
-                      className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:border-teal/50 transition-colors font-body"
+                      className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-3 py-2.5 text-xs text-on-surface focus:outline-none focus:border-teal/50 transition-colors font-body"
                       required
                     />
                   </div>
@@ -891,17 +888,7 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Beschreibung / Label</label>
-                  <input 
-                    type="text" 
-                    value={newLabel}
-                    onChange={(e) => setNewLabel(e.target.value)}
-                    className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:border-teal/50 transition-colors font-body"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="grid grid-cols-1 gap-3 pt-1">
                   {/* Select Icon */}
                   <div className="space-y-1">
                     <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Icon</label>
@@ -915,20 +902,6 @@ export default function Settings() {
                       <option value="zap">⚡ Momentum (Volatilität)</option>
                     </select>
                   </div>
-
-                  {/* Select Color Theme Accent */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-on-surface-variant/90 font-bold block">Farbe</label>
-                    <select 
-                      value={newColor}
-                      onChange={(e: any) => setNewColor(e.target.value)}
-                      className="w-full bg-surface-container-low border border-outline-variant/20 rounded-xl px-3 py-2.5 text-xs text-on-surface focus:outline-none focus:border-secondary/40 transition-colors cursor-pointer font-body"
-                    >
-                      <option value="primary">🟠 Bitcoin-Orange (Standard)</option>
-                      <option value="tertiary">🟠 Sekundär-Orange</option>
-                      <option value="error">🟠 Tertiär-Orange</option>
-                    </select>
-                  </div>
                 </div>
 
                 <div className="flex gap-2 mt-4">
@@ -939,7 +912,7 @@ export default function Settings() {
                         deleteTrigger(editingTriggerId, newTitle);
                         handleCloseModal();
                       }}
-                      className="py-3 px-4 bg-red-500/10 text-red-400 border border-red-500/20 font-headline font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all active:scale-97 cursor-pointer"
+                      className="py-3 px-3 bg-red-500/10 text-red-400 border border-red-500/20 font-headline font-black text-xs uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all active:scale-97 cursor-pointer"
                     >
                       <Trash2 size={16} />
                     </button>
