@@ -190,23 +190,49 @@ const generateMockChartData = (basePrice: number, intervalLabel: string): ChartP
 
 export default function Dashboard() {
   const [currency, setCurrency] = useState<'USD' | 'EUR'>('USD');
-  const [currentPrice, setCurrentPrice] = useState<number>(79240);
-  const [priceChangePercent, setPriceChangePercent] = useState<number>(2.45);
-  const [chartData, setChartData] = useState<ChartPoint[]>([]);
-  const [isChartLoading, setIsChartLoading] = useState<boolean>(true);
+  const [currentPrice, setCurrentPrice] = useState<number>(() => {
+    const cached = localStorage.getItem('einundzwanzig_cached_price');
+    return cached ? parseFloat(cached) : 79240;
+  });
+  const [priceChangePercent, setPriceChangePercent] = useState<number>(() => {
+    const cached = localStorage.getItem('einundzwanzig_cached_priceChange');
+    return cached ? parseFloat(cached) : 2.45;
+  });
+  const [chartData, setChartData] = useState<ChartPoint[]>(() => {
+    const cached = localStorage.getItem('einundzwanzig_cached_chartData');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [isChartLoading, setIsChartLoading] = useState<boolean>(() => !localStorage.getItem('einundzwanzig_cached_chartData'));
   const [isAdoptionOpen, setIsAdoptionOpen] = useState<boolean>(false);
   const [selectedInterval, setSelectedInterval] = useState<string>('24h');
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 144 });
 
   // Live Briefing States
-  const [liveInfo, setLiveInfo] = useState({
-    mempoolFee: 14,
-    hashrate: 612.4,
-    blockHeight: 844912,
-    unconfirmedTx: 112106,
-    minerStatus: '100% Aktiv',
-    lastUpdated: new Date()
+  const [liveInfo, setLiveInfo] = useState(() => {
+    const cached = localStorage.getItem('einundzwanzig_cached_liveInfo');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        return {
+          ...parsed,
+          lastUpdated: new Date(parsed.lastUpdated)
+        };
+      } catch (e) {}
+    }
+    return {
+      mempoolFee: 14,
+      hashrate: 612.4,
+      blockHeight: 844912,
+      unconfirmedTx: 112106,
+      minerStatus: '100% Aktiv',
+      lastUpdated: new Date()
+    };
   });
 
   const [isRefreshingLive, setIsRefreshingLive] = useState<boolean>(false);
@@ -235,7 +261,7 @@ export default function Dashboard() {
       lastBlockHeightRef.current = nextBlock;
 
       setLiveInfo(prev => {
-        return {
+        const nextState = {
           ...prev,
           mempoolFee: newFee,
           hashrate: newHash,
@@ -243,6 +269,8 @@ export default function Dashboard() {
           unconfirmedTx: newUnconfirmedTx,
           lastUpdated: new Date()
         };
+        localStorage.setItem('einundzwanzig_cached_liveInfo', JSON.stringify(nextState));
+        return nextState;
       });
     } catch (e) {
       console.error("Fehler beim Abrufen der Mempool-Daten", e);
@@ -291,6 +319,7 @@ export default function Dashboard() {
         const price = parseFloat(json.data.amount);
         if (!isNaN(price)) {
           setCurrentPrice(price);
+          localStorage.setItem('einundzwanzig_cached_price', price.toString());
         }
       } catch (err) {
         console.warn('Could not fetch live price, using estimate', err);
@@ -342,11 +371,13 @@ export default function Dashboard() {
 
         if (points && points.length > 0) {
           setChartData(points);
+          localStorage.setItem('einundzwanzig_cached_chartData', JSON.stringify(points));
           // Calculate exact change for this interval
           const initialPrice = points[0].price;
           const finalPrice = points[points.length - 1].price;
           const calculatedChange = ((finalPrice - initialPrice) / initialPrice) * 100;
           setPriceChangePercent(calculatedChange);
+          localStorage.setItem('einundzwanzig_cached_priceChange', calculatedChange.toString());
         } else {
           throw new Error('No points mapped');
         }
@@ -355,11 +386,16 @@ export default function Dashboard() {
         // Fallback to organic mock data
         const fallback = generateMockChartData(currentPrice || (currency === 'USD' ? 79240 : 73510), selectedInterval);
         setChartData(fallback);
+        localStorage.setItem('einundzwanzig_cached_chartData', JSON.stringify(fallback));
         
-        if (selectedInterval === '24h') setPriceChangePercent(2.45);
-        else if (selectedInterval === '7T') setPriceChangePercent(-1.12);
-        else if (selectedInterval === '30T') setPriceChangePercent(12.34);
-        else if (selectedInterval === '1J') setPriceChangePercent(118.41);
+        let fallbackChange = 2.45;
+        if (selectedInterval === '24h') fallbackChange = 2.45;
+        else if (selectedInterval === '7T') fallbackChange = -1.12;
+        else if (selectedInterval === '30T') fallbackChange = 12.34;
+        else if (selectedInterval === '1J') fallbackChange = 118.41;
+        
+        setPriceChangePercent(fallbackChange);
+        localStorage.setItem('einundzwanzig_cached_priceChange', fallbackChange.toString());
       } finally {
         setIsChartLoading(false);
       }

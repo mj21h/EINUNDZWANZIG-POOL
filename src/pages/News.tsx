@@ -12,8 +12,16 @@ interface NewsItem {
 }
 
 export default function News() {
-  const [items, setItems] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [items, setItems] = useState<NewsItem[]>(() => {
+    const cached = localStorage.getItem('einundzwanzig_cached_news');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => !localStorage.getItem('einundzwanzig_cached_news'));
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
@@ -21,7 +29,9 @@ export default function News() {
     if (isManualRefresh) {
       setRefreshing(true);
     } else {
-      setLoading(true);
+      if (!localStorage.getItem('einundzwanzig_cached_news')) {
+        setLoading(true);
+      }
     }
     setError(null);
     try {
@@ -57,6 +67,7 @@ export default function News() {
           };
         });
         setItems(parsedItems);
+        localStorage.setItem('einundzwanzig_cached_news', JSON.stringify(parsedItems));
       } else {
         throw new Error('Ungültiges Datenformat erhalten');
       }
@@ -138,9 +149,6 @@ export default function News() {
         <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface mb-2">
           Bitcoin News
         </h2>
-        <p className="font-body text-on-surface-variant text-sm">
-          Die aktuellsten Artikel und Analysen direkt vom größten deutschen Bitcoin-Portal.
-        </p>
       </div>
 
       {loading && (
