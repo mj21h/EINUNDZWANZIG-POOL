@@ -123,32 +123,19 @@ export default function News() {
 
   return (
     <div className="px-3 space-y-8">
-      {/* Tracker Status Line */}
-      <div className="flex justify-between items-center bg-[#1a1a1a]/50 px-3 py-2 rounded-full w-full">
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-teal">
-            Blocktrainer RSS Feed
-          </span>
-        </div>
+      <div className="flex justify-between items-center pt-2 mb-2">
+        <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface">
+          Bitcoin News
+        </h2>
         <button 
           onClick={() => fetchNews(true)}
           disabled={loading || refreshing}
-          className="text-teal hover:text-[#ffb353] p-1 rounded-full hover:bg-surface-container transition-all active:rotate-45 disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+          className="text-teal hover:text-teal/80 px-3 py-1.5 rounded-full bg-[#1a1a1a]/50 hover:bg-[#1a1a1a] transition-all disabled:opacity-50 cursor-pointer flex items-center gap-2 flex-shrink-0 border border-transparent hover:border-teal/20"
           title="News aktualisieren"
         >
           <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-          <span className="text-[9px] font-bold uppercase tracking-wider">Aktualisieren</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">Aktualisieren</span>
         </button>
-      </div>
-
-      <div>
-        <h2 className="font-headline font-extrabold text-3xl tracking-tight text-on-surface mb-2">
-          Bitcoin News
-        </h2>
       </div>
 
       {loading && (

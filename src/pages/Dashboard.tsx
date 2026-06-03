@@ -502,13 +502,7 @@ export default function Dashboard() {
 
       {/* Live Chart Container */}
       <div className="w-full h-64 bg-[#1a1a1a] border border-outline-variant/10 rounded-2xl relative overflow-hidden p-3 flex flex-col justify-between">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 z-10 font-body text-xs">
-          <span className="bg-surface-container/85 backdrop-blur border border-outline-variant/15 px-3 py-1.5 rounded-xl font-bold text-on-surface tracking-wide shrink-0">
-            {selectedInterval === '24h' && `24h Preisverlauf (${currency})`}
-            {selectedInterval === '7T' && `7 Tage Preisverlauf (${currency})`}
-            {selectedInterval === '30T' && `30 Tage Preisverlauf (${currency})`}
-            {selectedInterval === '1J' && `1 Jahr Preisverlauf (${currency})`}
-          </span>
+        <div className="flex justify-end z-10 font-body text-xs">
           <div className="flex items-center gap-1 bg-surface-container-high/60 backdrop-blur border border-outline-variant/15 p-1 rounded-xl">
             {[
               { id: '24h', label: '24h' },
@@ -771,7 +765,7 @@ export default function Dashboard() {
       </section>
 
       {/* Dynamic Bitcoin-Only Quote Section at bottom */}
-      <section className="pt-12 pb-14 mt-6 border-t border-outline-variant/10 flex flex-col items-center justify-center text-center px-2 relative overflow-hidden">
+      <section className="pt-6 pb-2 mt-2 border-t border-outline-variant/10 flex flex-col items-center justify-center text-center px-2 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
         
         {/* Quote symbol */}
@@ -802,7 +796,7 @@ export default function Dashboard() {
         </div>
 
         {/* Dynamic Indicator Dots to reflect page scrolled state / active trigger */}
-        <div className="flex gap-1.5 mt-8 justify-center items-center opacity-30 hover:opacity-75 transition-opacity">
+        <div className="flex gap-1.5 mt-4 justify-center items-center opacity-30 hover:opacity-75 transition-opacity">
           {btcQuotes.map((_, dotIdx) => (
             <button
               key={dotIdx}

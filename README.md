@@ -1,6 +1,6 @@
 # EINUNDZWANZIG POOL 🌋
 
-Die ultimative Kommandozentrale für Bitcoiner. Bitcoin only, ohne Altcoins.
+Die ultimative Kommandozentrale für Bitcoiner. Ohne Rauschen, ohne Altcoins – reines Signal. 
 
 Einundzwanzig Pool ist ein professionelles, fokussiertes Dashboard für Marktanalysen, wesentliche Metriken und aktuelle Entwicklungen rund um das härteste Geld der Welt. Don't trust, verify.
 
@@ -8,11 +8,15 @@ Einundzwanzig Pool ist ein professionelles, fokussiertes Dashboard für Marktana
 
 ## 📸 Screenshots & Vorschau
 
+> **Hinweis für Entwickler:** Lade deine Screenshots der App (Dashboard, News, Einstellungen) im Ordner `/public/screenshots/` hoch und ersetze diese Platzhalter-URLs mit den echten Dateipfaden (z.B. `/screenshots/dashboard.png`).
+
 <p align="center">
-  <img height="500" alt="dashboard" src="https://github.com/user-attachments/assets/6913ff17-983f-49a6-b139-9e495491b9cc" style="margin: 0 10px; border-radius: 12px;"/>
-  <img height="500" alt="indikatoren" src="https://github.com/user-attachments/assets/729d91b5-060c-4d20-bdce-7f39ffffe952" style="margin: 0 10px; border-radius: 12px;"/>
-  <img height="500" alt="news" src="https://github.com/user-attachments/assets/8c4f58cb-6339-4e1e-952b-3a37bc0ff532" style="margin: 0 10px; border-radius: 12px;"/>
+  <img src="https://placehold.co/250x500/1a1a1a/teal?text=Screenshot+Dashboard" alt="Dashboard Platzhalter" style="margin: 0 10px; border-radius: 12px;"/>
+  <img src="https://placehold.co/250x500/1a1a1a/teal?text=Screenshot+News" alt="News Platzhalter" style="margin: 0 10px; border-radius: 12px;"/>
+  <img src="https://placehold.co/250x500/1a1a1a/teal?text=Screenshot+Einstellungen" alt="Einstellungen Platzhalter" style="margin: 0 10px; border-radius: 12px;"/>
 </p>
+
+*Beispielhafte Ansichten der Applikation (Dashboard, Bitcoin News-Feed, Einstellungen & Preis-Alarme).*
 
 ---
 
