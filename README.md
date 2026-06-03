@@ -8,15 +8,11 @@ Einundzwanzig Pool ist ein professionelles, fokussiertes Dashboard für Marktana
 
 ## 📸 Screenshots & Vorschau
 
-> **Hinweis für Entwickler:** Lade deine Screenshots der App (Dashboard, News, Einstellungen) im Ordner `/public/screenshots/` hoch und ersetze diese Platzhalter-URLs mit den echten Dateipfaden (z.B. `/screenshots/dashboard.png`).
-
 <p align="center">
-  <img src="https://placehold.co/250x500/1a1a1a/teal?text=Screenshot+Dashboard" alt="Dashboard Platzhalter" style="margin: 0 10px; border-radius: 12px;"/>
-  <img src="https://placehold.co/250x500/1a1a1a/teal?text=Screenshot+News" alt="News Platzhalter" style="margin: 0 10px; border-radius: 12px;"/>
-  <img src="https://placehold.co/250x500/1a1a1a/teal?text=Screenshot+Einstellungen" alt="Einstellungen Platzhalter" style="margin: 0 10px; border-radius: 12px;"/>
+<img height="600" alt="Screenshot_20260603-103911" src="https://github.com/user-attachments/assets/dad6fb93-6099-4822-adaf-223c7034ee64" />
+<img height="600" alt="Screenshot_20260603-103922" src="https://github.com/user-attachments/assets/41540607-569e-44eb-ba50-ec765832c736" />
+<img height="600" alt="Screenshot_20260603-103934" src="https://github.com/user-attachments/assets/2af80a8e-e95f-44a4-9bc5-1ab7cd13c57a" />
 </p>
-
-*Beispielhafte Ansichten der Applikation (Dashboard, Bitcoin News-Feed, Einstellungen & Preis-Alarme).*
 
 ---
 
@@ -34,12 +30,6 @@ Eine kuratierte Auswahl an relevanten und bewährten Metriken, um die Marktphase
   
 ### 📰 Ungefiltertes Signal
 Integrierter, kuratierter News-Feed aus dem Herzen der deutschsprachigen Bitcoin-Community (u.a. Blocktrainer). Keine Zeitverschwendung mit irrelevanten Krypto-Ablenkungen, nur reine Bitcoin-Informationen.
-
-### ⚙️ Zentrale Einstellungen & Benachrichtigungen
-Bleib Herr deiner Zeit. Unter den Einstellungen verwaltest du alle deine Parameter und verpasst keine wichtigen Informationen:
-- **Zentrale Push-Mitteilungen**: Eine gebündelte Steuerung für News-Updates und Kurs-Alarme.
-- **Custom Price Alerts**: Setze Alarme für deine individuellen Support- und Widerstandszonen.
-- **Native Push-Mitteilungen**: Funktionierende Benachrichtigungen auf Endgeräten mit Opt-In beim Start der App.
 
 ---
 
