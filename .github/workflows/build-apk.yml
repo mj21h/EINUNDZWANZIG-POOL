@@ -51,7 +51,7 @@ jobs:
           cp public/bitcoin-logo-512.png assets/splash.png
           cp public/bitcoin-logo-512.png assets/splash-dark.png
           npx capacitor-assets generate --android --iconBackgroundColor '#0b0c0e' --iconBackgroundColorDark '#0b0c0e' --splashBackgroundColor '#0b0c0e' --splashBackgroundColorDark '#0b0c0e'
-          
+
       - name: Generate Custom Keystore for Signing
         run: |
           keytool -genkeypair -v \
