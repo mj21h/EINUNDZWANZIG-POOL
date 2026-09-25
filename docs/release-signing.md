@@ -10,7 +10,7 @@ keytool -genkeypair -v \
   -alias einundzwanzig \
   -keyalg RSA -keysize 4096 \
   -validity 10000 \
-  -dname "CN=Einundzwanzig, OU=Pool, O=Einundzwanzig, C=DE"
+  -dname "CN=EINUNDZWANZIG POOL"
 ```
 
 `keytool` fragt Keystore- und Schlüsselpasswort interaktiv ab. Starke, unterschiedliche Passwörter wählen und im Passwortmanager speichern.
