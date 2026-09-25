@@ -52,51 +52,30 @@ jobs:
           cp public/bitcoin-logo-512.png assets/splash-dark.png
           npx capacitor-assets generate --android --iconBackgroundColor '#0b0c0e' --iconBackgroundColorDark '#0b0c0e' --splashBackgroundColor '#0b0c0e' --splashBackgroundColorDark '#0b0c0e'
           
-      - name: Prepare Signing Keystore
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Generate Custom Keystore for Signing
         run: |
-          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
-            # Persistent keystore from repository secrets: every build carries the same
-            # signature, so new APKs install as updates over older ones.
-            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
-            {
-              echo "SIGNING_STORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD"
-              echo "SIGNING_KEY_ALIAS=$ANDROID_KEY_ALIAS"
-              echo "SIGNING_KEY_PASSWORD=${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}"
-            } >> "$GITHUB_ENV"
-          else
-            echo "::warning title=Temporary signing key::Secret ANDROID_KEYSTORE_BASE64 is not set. This APK is signed with a throwaway key and cannot be installed as an update over a previous build."
-            keytool -genkeypair -v \
-              -keystore android/app/release.keystore \
-              -alias androiddebugkey \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass android \
-              -keypass android \
-              -dname "cn=Einundzwanzig, ou=Pool, o=Einundzwanzig, c=DE"
-            {
-              echo "SIGNING_STORE_PASSWORD=android"
-              echo "SIGNING_KEY_ALIAS=androiddebugkey"
-              echo "SIGNING_KEY_PASSWORD=android"
-            } >> "$GITHUB_ENV"
-          fi
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass android \
+            -keypass android \
+            -dname "cn=Einundzwanzig, ou=Pool, o=Einundzwanzig, c=DE"
+          cp debug.keystore android/app/debug.keystore
 
       - name: Configure Gradle Signing
         run: |
-          cat <<'EOF' >> android/app/build.gradle
-
+          cat <<EOF >> android/app/build.gradle
+          
           android {
               signingConfigs {
                   release {
-                      storeFile file("release.keystore")
-                      storePassword System.getenv("SIGNING_STORE_PASSWORD")
-                      keyAlias System.getenv("SIGNING_KEY_ALIAS")
-                      keyPassword System.getenv("SIGNING_KEY_PASSWORD")
+                      storeFile file("debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
                   }
               }
               buildTypes {
