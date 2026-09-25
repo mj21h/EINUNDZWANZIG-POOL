@@ -11,6 +11,12 @@ interface NewsItem {
   imageUrl: string;
 }
 
+// Strips HTML tags and decodes entities like &#8230; or &nbsp; from feed texts.
+const toPlainText = (html: string): string => {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+};
+
 export default function News() {
   const [items, setItems] = useState<NewsItem[]>(() => {
     const cached = localStorage.getItem('einundzwanzig_cached_news');
@@ -47,7 +53,7 @@ export default function News() {
       
       if (data && data.status === "ok" && Array.isArray(data.items)) {
         const parsedItems = data.items.slice(0, 5).map((item: any, idx: number) => {
-          let parsedDesc = (item.description || item.content || "").replace(/<\/?[^>]+(>|$)/g, "").trim();
+          let parsedDesc = toPlainText(item.description || item.content || "");
           if (parsedDesc.length > 200) parsedDesc = parsedDesc.substring(0, 197) + "...";
           
           let imageUrl = item.thumbnail || "";
@@ -59,7 +65,7 @@ export default function News() {
           
           return {
             id: String(idx),
-            title: item.title,
+            title: toPlainText(item.title || ""),
             link: item.link,
             pubDate: item.pubDate,
             description: parsedDesc,
@@ -147,7 +153,13 @@ export default function News() {
         </div>
       )}
 
-      {error && !loading && (
+      {error && !loading && items.length > 0 && (
+        <div className="bg-error/10 border border-error/20 rounded-xl px-3 py-2 text-xs text-error font-medium">
+          Aktualisierung fehlgeschlagen ({error}). Angezeigt wird der letzte gespeicherte Stand.
+        </div>
+      )}
+
+      {error && !loading && items.length === 0 && (
         <div className="bg-error/10 border border-error/20 rounded-2xl p-3 text-center space-y-4">
           <p className="text-sm text-error font-medium">{error}</p>
           <button
@@ -169,7 +181,7 @@ export default function News() {
         </div>
       )}
 
-      {!loading && !error && items.length > 0 && (
+      {!loading && items.length > 0 && (
         <div className="space-y-8 pb-4">
           {/* Herocard for the newest article */}
           {heroItem && (

@@ -139,155 +139,242 @@ const btcQuotes: Quote[] = [
   }
 ];
 
-// Fallback deterministic chart points in case API gets blocked
-const generateMockChartData = (basePrice: number, intervalLabel: string): ChartPoint[] => {
-  const data: ChartPoint[] = [];
-  const now = new Date();
-  
-  if (intervalLabel === '24h') {
-    for (let i = 23; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      const hourStr = time.getHours().toString().padStart(2, '0') + ':00';
-      const seed = Math.sin(i * 0.5) * 450 + Math.cos(i * 0.8) * 200;
-      data.push({
-        time: hourStr,
-        price: Math.round(basePrice - (i * 80) + seed),
-      });
-    }
-  } else if (intervalLabel === '7T') {
-    for (let i = 41; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 4 * 60 * 60 * 1000);
-      const label = time.toLocaleDateString('de-DE', { weekday: 'short' }) + ' ' + time.getHours() + 'h';
-      const seed = Math.sin(i * 0.3) * 800 + Math.cos(i * 0.5) * 400;
-      data.push({
-        time: label,
-        price: Math.round(basePrice - (i * 120) + seed),
-      });
-    }
-  } else if (intervalLabel === '30T') {
-    for (let i = 29; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const label = time.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-      const seed = Math.sin(i * 0.2) * 1500 + Math.cos(i * 0.4) * 800;
-      data.push({
-        time: label,
-        price: Math.round(basePrice - (i * 300) + seed),
-      });
-    }
-  } else if (intervalLabel === '1J') {
-    for (let i = 51; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-      const label = time.toLocaleDateString('de-DE', { month: 'short' });
-      const seed = Math.sin(i * 0.1) * 6000 + Math.cos(i * 0.2) * 2500;
-      data.push({
-        time: label,
-        price: Math.round(basePrice - (i * 800) + seed),
-      });
-    }
+type Currency = 'USD' | 'EUR';
+
+interface CachedPrice {
+  price: number;
+  ts: number;
+}
+
+interface CachedChart {
+  points: ChartPoint[];
+  refOpen: number;
+  ts: number;
+}
+
+interface LiveInfo {
+  mempoolFee: number | null;
+  hashrate: number | null;
+  blockHeight: number | null;
+  unconfirmedTx: number | null;
+  lastUpdated: number | null;
+}
+
+const CACHE_PREFIX = 'einundzwanzig_cache_v2_';
+const priceKey = (cur: Currency) => `${CACHE_PREFIX}price_${cur}`;
+const chartKey = (cur: Currency, interval: string) => `${CACHE_PREFIX}chart_${cur}_${interval}`;
+const LIVE_INFO_KEY = `${CACHE_PREFIX}liveInfo`;
+
+// Remove caches written by older app versions (not separated by currency/interval).
+try {
+  ['price', 'priceChange', 'chartData', 'liveInfo'].forEach((k) =>
+    localStorage.removeItem(`einundzwanzig_cached_${k}`)
+  );
+} catch (e) {}
+
+const readCache = <T,>(key: string): T | null => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch (e) {
+    return null;
   }
-  return data;
+};
+
+const writeCache = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
+};
+
+const isValidNumber = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+
+const readCachedPrice = (cur: Currency): CachedPrice | null => {
+  const cached = readCache<CachedPrice>(priceKey(cur));
+  return cached && isValidNumber(cached.price) && cached.price > 0 ? cached : null;
+};
+
+const readCachedChart = (cur: Currency, interval: string): CachedChart | null => {
+  const cached = readCache<CachedChart>(chartKey(cur, interval));
+  return cached && Array.isArray(cached.points) && cached.points.length > 0 && isValidNumber(cached.refOpen)
+    ? cached
+    : null;
+};
+
+const fetchJson = async (url: string, signal: AbortSignal) => {
+  const res = await fetch(url, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status} für ${url}`);
+  return res.json();
+};
+
+const formatTime = (ts: number | null) =>
+  ts ? new Date(ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '–';
+
+const feeLevel = (fee: number | null) => {
+  if (fee === null) return { label: 'Keine Daten', className: 'text-on-surface-variant' };
+  if (fee <= 5) return { label: 'Niedrig', className: 'text-emerald-400' };
+  if (fee <= 20) return { label: 'Normal', className: 'text-teal' };
+  if (fee <= 50) return { label: 'Erhöht', className: 'text-amber-400' };
+  return { label: 'Hoch', className: 'text-rose-400' };
+};
+
+// Runs `task` immediately and then every `ms` milliseconds while the page is visible.
+// The AbortSignal passed to `task` is aborted when deps change or the component unmounts,
+// so late responses from a previous currency/interval can't overwrite newer state.
+function usePolling(task: (signal: AbortSignal) => void, ms: number, deps: React.DependencyList) {
+  useEffect(() => {
+    const controller = new AbortController();
+    let timer: number | undefined;
+
+    const stop = () => {
+      if (timer !== undefined) {
+        window.clearInterval(timer);
+        timer = undefined;
+      }
+    };
+    const start = () => {
+      stop();
+      task(controller.signal);
+      timer = window.setInterval(() => task(controller.signal), ms);
+    };
+    const onVisibilityChange = () => (document.visibilityState === 'hidden' ? stop() : start());
+
+    if (document.visibilityState !== 'hidden') start();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      controller.abort();
+      stop();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
+const INTERVAL_CONFIG: Record<string, { binanceInterval: string; limit: number; formatLabel: (d: Date) => string }> = {
+  '24h': {
+    binanceInterval: '1h',
+    limit: 24,
+    formatLabel: (d) => d.getHours().toString().padStart(2, '0') + ':00',
+  },
+  '7T': {
+    binanceInterval: '4h',
+    limit: 42,
+    formatLabel: (d) => d.toLocaleDateString('de-DE', { weekday: 'short' }) + ' ' + d.getHours() + 'h',
+  },
+  '30T': {
+    binanceInterval: '1d',
+    limit: 30,
+    formatLabel: (d) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
+  },
+  '1J': {
+    binanceInterval: '1w',
+    limit: 52,
+    formatLabel: (d) => d.toLocaleDateString('de-DE', { month: 'short' }),
+  },
 };
 
 export default function Dashboard() {
-  const [currency, setCurrency] = useState<'USD' | 'EUR'>('USD');
-  const [currentPrice, setCurrentPrice] = useState<number>(() => {
-    const cached = localStorage.getItem('einundzwanzig_cached_price');
-    return cached ? parseFloat(cached) : 79240;
-  });
-  const [priceChangePercent, setPriceChangePercent] = useState<number>(() => {
-    const cached = localStorage.getItem('einundzwanzig_cached_priceChange');
-    return cached ? parseFloat(cached) : 2.45;
-  });
-  const [chartData, setChartData] = useState<ChartPoint[]>(() => {
-    const cached = localStorage.getItem('einundzwanzig_cached_chartData');
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return [];
-  });
-  const [isChartLoading, setIsChartLoading] = useState<boolean>(() => !localStorage.getItem('einundzwanzig_cached_chartData'));
-  const [isAdoptionOpen, setIsAdoptionOpen] = useState<boolean>(false);
+  const [currency, setCurrency] = useState<Currency>('USD');
   const [selectedInterval, setSelectedInterval] = useState<string>('24h');
+
+  const [priceState, setPriceState] = useState<{ price: number | null; ts: number | null; offline: boolean }>(() => {
+    const cached = readCachedPrice('USD');
+    return { price: cached?.price ?? null, ts: cached?.ts ?? null, offline: false };
+  });
+  const currentPrice = priceState.price;
+
+  const [chartState, setChartState] = useState<{ points: ChartPoint[]; refOpen: number | null }>(() => {
+    const cached = readCachedChart('USD', '24h');
+    return { points: cached?.points ?? [], refOpen: cached?.refOpen ?? null };
+  });
+  const chartData = chartState.points;
+  const [isChartLoading, setIsChartLoading] = useState<boolean>(() => !readCachedChart('USD', '24h'));
+  const [chartError, setChartError] = useState<boolean>(false);
+
+  // Change since the open of the first candle of the selected interval, based on the live price.
+  const priceChangePercent =
+    currentPrice !== null && chartState.refOpen
+      ? ((currentPrice - chartState.refOpen) / chartState.refOpen) * 100
+      : null;
+
+  const [isAdoptionOpen, setIsAdoptionOpen] = useState<boolean>(false);
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 144 });
 
   // Live Briefing States
-  const [liveInfo, setLiveInfo] = useState(() => {
-    const cached = localStorage.getItem('einundzwanzig_cached_liveInfo');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        return {
-          ...parsed,
-          lastUpdated: new Date(parsed.lastUpdated)
-        };
-      } catch (e) {}
-    }
+  const [liveInfo, setLiveInfo] = useState<LiveInfo>(() => {
+    const cached = readCache<Partial<LiveInfo>>(LIVE_INFO_KEY) ?? {};
+    const num = (v: unknown) => (isValidNumber(v) ? v : null);
     return {
-      mempoolFee: 14,
-      hashrate: 612.4,
-      blockHeight: 844912,
-      unconfirmedTx: 112106,
-      minerStatus: '100% Aktiv',
-      lastUpdated: new Date()
+      mempoolFee: num(cached.mempoolFee),
+      hashrate: num(cached.hashrate),
+      blockHeight: num(cached.blockHeight),
+      unconfirmedTx: num(cached.unconfirmedTx),
+      lastUpdated: num(cached.lastUpdated),
     };
   });
 
   const [isRefreshingLive, setIsRefreshingLive] = useState<boolean>(false);
-  const lastBlockHeightRef = React.useRef<number>(0);
 
-  const fetchMempoolData = async (manual = false) => {
-    if (manual) setIsRefreshingLive(true);
+  const updateLiveInfo = (patch: Partial<LiveInfo>) => {
+    setLiveInfo((prev) => {
+      const nextState = { ...prev, ...patch, lastUpdated: Date.now() };
+      writeCache(LIVE_INFO_KEY, nextState);
+      return nextState;
+    });
+  };
+
+  const fetchMempoolData = async (signal: AbortSignal) => {
+    const [feeRes, blockRes, mempoolRes] = await Promise.allSettled([
+      fetchJson('https://mempool.space/api/v1/fees/recommended', signal),
+      fetchJson('https://mempool.space/api/blocks/tip/height', signal),
+      fetchJson('https://mempool.space/api/mempool', signal),
+    ]);
+    if (signal.aborted) return;
+
+    const patch: Partial<LiveInfo> = {};
+    if (feeRes.status === 'fulfilled' && isValidNumber(feeRes.value?.fastestFee)) {
+      patch.mempoolFee = feeRes.value.fastestFee;
+    }
+    if (blockRes.status === 'fulfilled' && isValidNumber(blockRes.value)) {
+      patch.blockHeight = blockRes.value;
+    }
+    if (mempoolRes.status === 'fulfilled' && isValidNumber(mempoolRes.value?.count)) {
+      patch.unconfirmedTx = mempoolRes.value.count;
+    }
+
+    const failed = [feeRes, blockRes, mempoolRes].filter((r) => r.status === 'rejected');
+    if (failed.length > 0) {
+      console.error('Fehler beim Abrufen der Mempool-Daten', failed);
+    }
+    if (Object.keys(patch).length > 0) updateLiveInfo(patch);
+  };
+
+  const fetchHashrate = async (signal: AbortSignal) => {
     try {
-      const ts = Date.now();
-      const [feeRes, blockRes, mempoolRes, hashRes] = await Promise.all([
-        fetch(`https://mempool.space/api/v1/fees/recommended?_t=${ts}`),
-        fetch(`https://mempool.space/api/blocks/tip/height?_t=${ts}`),
-        fetch(`https://mempool.space/api/mempool?_t=${ts}`),
-        fetch(`https://mempool.space/api/v1/mining/hashrate/3d?_t=${ts}`)
-      ]);
-
-      const feeData = await feeRes.json();
-      const nextBlock = parseInt(await blockRes.text(), 10);
-      const mempoolData = await mempoolRes.json();
-      const hashData = await hashRes.json();
-
-      const newFee = feeData.fastestFee;
-      const newUnconfirmedTx = mempoolData.count;
-      const newHash = parseFloat((hashData.currentHashrate / 1000000000000000000).toFixed(1));
-
-      lastBlockHeightRef.current = nextBlock;
-
-      setLiveInfo(prev => {
-        const nextState = {
-          ...prev,
-          mempoolFee: newFee,
-          hashrate: newHash,
-          blockHeight: nextBlock,
-          unconfirmedTx: newUnconfirmedTx,
-          lastUpdated: new Date()
-        };
-        localStorage.setItem('einundzwanzig_cached_liveInfo', JSON.stringify(nextState));
-        return nextState;
-      });
+      const hashData = await fetchJson('https://mempool.space/api/v1/mining/hashrate/3d', signal);
+      if (signal.aborted) return;
+      if (isValidNumber(hashData?.currentHashrate)) {
+        updateLiveInfo({ hashrate: parseFloat((hashData.currentHashrate / 1e18).toFixed(1)) });
+      }
     } catch (e) {
-      console.error("Fehler beim Abrufen der Mempool-Daten", e);
-    } finally {
-      if (manual) setIsRefreshingLive(false);
+      if (!signal.aborted) console.error('Fehler beim Abrufen der Hashrate', e);
     }
   };
 
-  useEffect(() => {
-    fetchMempoolData();
-    const dataTimer = setInterval(() => fetchMempoolData(), 8000);
+  // Fees, block height and mempool change with every block; hashrate only a few times per day.
+  usePolling(fetchMempoolData, 30_000, []);
+  usePolling(fetchHashrate, 10 * 60_000, []);
 
-    return () => clearInterval(dataTimer);
-  }, []);
-
-  const handleManualRefreshLive = () => {
-    fetchMempoolData(true);
+  const handleManualRefreshLive = async () => {
+    setIsRefreshingLive(true);
+    const signal = new AbortController().signal;
+    try {
+      await Promise.all([fetchMempoolData(signal), fetchHashrate(signal)]);
+    } finally {
+      setIsRefreshingLive(false);
+    }
   };
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -308,103 +395,79 @@ export default function Dashboard() {
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Fetch real-time price independently
+  // Show the cached values of the newly selected currency/interval right away,
+  // instead of keeping the numbers of the previous selection until the fetch returns.
   useEffect(() => {
-    const fetchLivePrice = async () => {
-      try {
-        const product = currency === 'USD' ? 'BTC-USD' : 'BTC-EUR';
-        const response = await fetch(`https://api.coinbase.com/v2/prices/${product}/spot`);
-        if (!response.ok) throw new Error('Failed to fetch price');
-        const json = await response.json();
-        const price = parseFloat(json.data.amount);
-        if (!isNaN(price)) {
-          setCurrentPrice(price);
-          localStorage.setItem('einundzwanzig_cached_price', price.toString());
-        }
-      } catch (err) {
-        console.warn('Could not fetch live price, using estimate', err);
-        // Sensible estimates
-        setCurrentPrice(currency === 'USD' ? 79240 : 73510);
-      }
-    };
-
-    fetchLivePrice();
-    const priceInterval = setInterval(fetchLivePrice, 10000);
-    return () => clearInterval(priceInterval);
+    const cachedPrice = readCachedPrice(currency);
+    setPriceState({ price: cachedPrice?.price ?? null, ts: cachedPrice?.ts ?? null, offline: false });
   }, [currency]);
 
-  // Fetch chart data when selectedInterval or currency changes
   useEffect(() => {
-    const fetchChartData = async () => {
+    const cachedChart = readCachedChart(currency, selectedInterval);
+    setChartState({ points: cachedChart?.points ?? [], refOpen: cachedChart?.refOpen ?? null });
+    setIsChartLoading(!cachedChart);
+    setChartError(false);
+  }, [currency, selectedInterval]);
+
+  // Fetch real-time price independently
+  usePolling(
+    async (signal) => {
       try {
-        setIsChartLoading(true);
-        let binanceInterval = '1h';
-        let limit = 24;
-        let formatLabel = (d: Date) => d.getHours().toString().padStart(2, '0') + ':00';
-
-        if (selectedInterval === '7T') {
-          binanceInterval = '4h';
-          limit = 42;
-          formatLabel = (d: Date) => d.toLocaleDateString('de-DE', { weekday: 'short' }) + ' ' + d.getHours() + 'h';
-        } else if (selectedInterval === '30T') {
-          binanceInterval = '1d';
-          limit = 30;
-          formatLabel = (d: Date) => d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-        } else if (selectedInterval === '1J') {
-          binanceInterval = '1w';
-          limit = 52;
-          formatLabel = (d: Date) => d.toLocaleDateString('de-DE', { month: 'short' });
-        }
-
-        const symbol = currency === 'USD' ? 'BTCUSDT' : 'BTCEUR';
-        const response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInterval}&limit=${limit}`);
-        if (!response.ok) throw new Error('Failed to fetch chart data');
-        const data = await response.json();
-        
-        const points: ChartPoint[] = data.map((item: any) => {
-          const time = new Date(item[0]);
-          return {
-            time: formatLabel(time),
-            price: Math.round(parseFloat(item[4])) // close price
-          };
-        });
-
-        if (points && points.length > 0) {
-          setChartData(points);
-          localStorage.setItem('einundzwanzig_cached_chartData', JSON.stringify(points));
-          // Calculate exact change for this interval
-          const initialPrice = points[0].price;
-          const finalPrice = points[points.length - 1].price;
-          const calculatedChange = ((finalPrice - initialPrice) / initialPrice) * 100;
-          setPriceChangePercent(calculatedChange);
-          localStorage.setItem('einundzwanzig_cached_priceChange', calculatedChange.toString());
-        } else {
-          throw new Error('No points mapped');
-        }
+        const product = currency === 'USD' ? 'BTC-USD' : 'BTC-EUR';
+        const json = await fetchJson(`https://api.coinbase.com/v2/prices/${product}/spot`, signal);
+        const price = parseFloat(json?.data?.amount);
+        if (signal.aborted) return;
+        if (!isValidNumber(price) || price <= 0) throw new Error('Ungültiger Preis');
+        const ts = Date.now();
+        setPriceState({ price, ts, offline: false });
+        writeCache(priceKey(currency), { price, ts });
       } catch (err) {
-        console.warn('CORS or API issue for chart, generating fallback stream.', err);
-        // Fallback to organic mock data
-        const fallback = generateMockChartData(currentPrice || (currency === 'USD' ? 79240 : 73510), selectedInterval);
-        setChartData(fallback);
-        localStorage.setItem('einundzwanzig_cached_chartData', JSON.stringify(fallback));
-        
-        let fallbackChange = 2.45;
-        if (selectedInterval === '24h') fallbackChange = 2.45;
-        else if (selectedInterval === '7T') fallbackChange = -1.12;
-        else if (selectedInterval === '30T') fallbackChange = 12.34;
-        else if (selectedInterval === '1J') fallbackChange = 118.41;
-        
-        setPriceChangePercent(fallbackChange);
-        localStorage.setItem('einundzwanzig_cached_priceChange', fallbackChange.toString());
-      } finally {
-        setIsChartLoading(false);
+        if (signal.aborted) return;
+        console.warn('Live-Preis nicht verfügbar, zeige letzten bekannten Wert', err);
+        // Keep the last known price; only flag it as stale.
+        setPriceState((prev) => ({ ...prev, offline: true }));
       }
-    };
+    },
+    10_000,
+    [currency]
+  );
 
-    fetchChartData();
-    const intervalId = setInterval(fetchChartData, 60000);
-    return () => clearInterval(intervalId);
-  }, [selectedInterval, currency]);
+  // Fetch chart data when selectedInterval or currency changes
+  usePolling(
+    async (signal) => {
+      const { binanceInterval, limit, formatLabel } = INTERVAL_CONFIG[selectedInterval];
+      const symbol = currency === 'USD' ? 'BTCUSDT' : 'BTCEUR';
+      try {
+        const data = await fetchJson(
+          `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInterval}&limit=${limit}`,
+          signal
+        );
+        if (signal.aborted) return;
+        if (!Array.isArray(data) || data.length === 0) throw new Error('Keine Chartdaten');
+
+        const points: ChartPoint[] = data.map((item: any) => ({
+          time: formatLabel(new Date(item[0])),
+          price: Math.round(parseFloat(item[4])), // close price
+        }));
+        const refOpen = parseFloat(data[0][1]); // open price of the first candle
+        if (!isValidNumber(refOpen) || points.some((p) => !isValidNumber(p.price))) {
+          throw new Error('Ungültige Chartdaten');
+        }
+
+        setChartState({ points, refOpen });
+        setChartError(false);
+        writeCache(chartKey(currency, selectedInterval), { points, refOpen, ts: Date.now() });
+      } catch (err) {
+        if (signal.aborted) return;
+        console.warn('Chartdaten nicht verfügbar, zeige letzten bekannten Stand', err);
+        setChartError(true);
+      } finally {
+        if (!signal.aborted) setIsChartLoading(false);
+      }
+    },
+    60_000,
+    [selectedInterval, currency]
+  );
 
   // Bitcoin only quote scrolling logic
   const [currentQuoteIndex, setCurrentQuoteIndex] = useState<number>(0);
@@ -450,11 +513,15 @@ export default function Dashboard() {
         <div className="flex justify-between items-center w-full">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary"></span>
+              {!priceState.offline && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${priceState.offline ? 'bg-on-surface-variant' : 'bg-secondary'}`}></span>
             </span>
             <span className="font-body text-[10px] text-secondary tracking-widest uppercase font-bold">
-              Live Bitcoin Kurs • BTC/{currency}
+              {priceState.offline
+                ? `Offline • Stand ${formatTime(priceState.ts)} • BTC/${currency}`
+                : `Live Bitcoin Kurs • BTC/${currency}`}
             </span>
           </div>
 
@@ -479,9 +546,12 @@ export default function Dashboard() {
         <div className="flex items-baseline gap-3">
           <h1 className="font-headline font-extrabold text-[3.2rem] leading-none tracking-tighter text-on-surface">
             {currency === 'USD' ? '$' : '€'}
-            {currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {currentPrice !== null
+              ? currentPrice.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : '–'}
           </h1>
           
+          {priceChangePercent !== null && (
           <div className="flex items-center">
             <span className={`font-body font-bold text-xs px-2.5 py-1 rounded-full flex items-center shrink-0 ${
               priceChangePercent >= 0 
@@ -494,9 +564,10 @@ export default function Dashboard() {
                 <TrendingDown size={13} className="mr-1 shrink-0" />
               )}
               {priceChangePercent >= 0 ? '+' : ''}
-              {priceChangePercent.toFixed(2)}%
+              {priceChangePercent.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
             </span>
           </div>
+          )}
         </div>
       </section>
 
@@ -532,6 +603,10 @@ export default function Dashboard() {
               <span>Analysiere Marktdaten...</span>
             </div>
           </div>
+        ) : chartData.length === 0 && chartError ? (
+          <div className="absolute inset-0 flex items-center justify-center z-10 text-on-surface-variant text-xs">
+            Keine Chartdaten verfügbar
+          </div>
         ) : null}
 
         <div className="h-36 w-full mt-4 -mx-5 -mb-5 relative" ref={containerRef}>
@@ -556,7 +631,7 @@ export default function Dashboard() {
                     fontSize: '11px',
                   }}
                   formatter={(value: any) => [
-                    `${currency === 'USD' ? '$' : '€'}${Number(value).toLocaleString()}`, 
+                    `${currency === 'USD' ? '$' : '€'}${Number(value).toLocaleString('de-DE')}`, 
                     `BTC/${currency}`
                   ]}
                 />
@@ -612,21 +687,21 @@ export default function Dashboard() {
               <Zap size={11} className="text-[#F7931A]" /> Mempool-Gebühr
             </span>
             <div className="flex items-baseline gap-1 mt-1.5">
-              <span className="font-headline font-extrabold text-xl text-on-surface">{liveInfo.mempoolFee}</span>
+              <span className="font-headline font-extrabold text-xl text-on-surface">{liveInfo.mempoolFee ?? '–'}</span>
               <span className="text-[11px] text-[#F7931A] font-semibold">sat/vB</span>
             </div>
-            <span className="text-[9px] uppercase text-emerald-400 font-bold block mt-1">
-              • Optimal & Günstig
+            <span className={`text-[9px] uppercase font-bold block mt-1 ${feeLevel(liveInfo.mempoolFee).className}`}>
+              • {feeLevel(liveInfo.mempoolFee).label}
             </span>
           </div>
 
           {/* Hashrate Widget */}
           <div className="bg-[#151515] p-3 rounded-xl border border-outline-variant/5">
             <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold flex items-center gap-1">
-              <Cpu size={11} className="text-teal" /> Pool-Hashrate
+              <Cpu size={11} className="text-teal" /> Netzwerk-Hashrate
             </span>
             <div className="flex items-baseline gap-1 mt-1.5">
-              <span className="font-headline font-extrabold text-xl text-on-surface">{liveInfo.hashrate}</span>
+              <span className="font-headline font-extrabold text-xl text-on-surface">{liveInfo.hashrate !== null ? liveInfo.hashrate.toLocaleString('de-DE') : '–'}</span>
               <span className="text-[11px] text-teal font-semibold">EH/s</span>
             </div>
             <span className="text-[9px] uppercase text-teal font-extrabold block mt-1">
@@ -640,10 +715,10 @@ export default function Dashboard() {
               <Database size={11} className="text-teal" /> Letzter Block
             </span>
             <div className="flex items-baseline gap-1 mt-1.5">
-              <span className="font-headline font-bold text-lg text-on-surface">#{liveInfo.blockHeight}</span>
+              <span className="font-headline font-bold text-lg text-on-surface">{liveInfo.blockHeight !== null ? `#${liveInfo.blockHeight}` : '–'}</span>
             </div>
             <span className="text-[9px] uppercase text-on-surface-variant block mt-1 pb-0.5">
-              Status: Bestätigt
+              Stand: {formatTime(liveInfo.lastUpdated)}
             </span>
           </div>
 
@@ -653,7 +728,7 @@ export default function Dashboard() {
               <Activity size={11} className="text-[#F7931A]" /> Unbestätigt
             </span>
             <div className="flex items-baseline gap-1 mt-1.5">
-              <span className="font-headline font-extrabold text-xl text-white">{liveInfo.unconfirmedTx.toLocaleString('de-DE')}</span>
+              <span className="font-headline font-extrabold text-xl text-white">{liveInfo.unconfirmedTx !== null ? liveInfo.unconfirmedTx.toLocaleString('de-DE') : '–'}</span>
               <span className="text-[11px] text-[#F7931A] font-semibold">TX</span>
             </div>
             <span className="text-[9px] uppercase text-on-surface-variant font-bold block mt-1">

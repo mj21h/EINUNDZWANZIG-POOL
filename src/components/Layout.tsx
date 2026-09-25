@@ -66,10 +66,7 @@ export default function Layout({ children, activeTab, setActiveTab }: LayoutProp
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  window.scrollTo({ top: 0, behavior: 'auto' });
-                }}
+                onClick={() => setActiveTab(tab.id)}
                 className={cn(
                    "flex flex-col items-center justify-center transition-all duration-300 px-2 py-2 mx-1 rounded-xl cursor-pointer relative flex-1 w-full",
                   tabStyle

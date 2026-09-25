@@ -11,11 +11,6 @@ const config: CapacitorConfig = {
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
     },
-    LocalNotifications: {
-      smallIcon: "ic_launcher",
-      iconColor: "#F7931A",
-      sound: "beep.wav",
-    },
   },
 };
 
