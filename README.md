@@ -2,7 +2,7 @@
 
 Die ultimative Kommandozentrale für Bitcoiner. Ohne Rauschen, ohne Altcoins – reines Signal. 
 
-Einundzwanzig Pool ist ein professionelles, fokussiertes Dashboard für Marktanalysen, wesentliche Metriken und aktuelle Entwicklungen rund um das härteste Geld der Welt. Don't trust, verify.
+Einundzwanzig Pool ist ein fokussiertes Dashboard für Kurs, Netzwerkdaten, Marktindikatoren und aktuelle Entwicklungen rund um das härteste Geld der Welt. Don't trust, verify.
 
 ---
 
@@ -18,18 +18,27 @@ Einundzwanzig Pool ist ein professionelles, fokussiertes Dashboard für Marktana
 
 ## 🚀 Kernfunktionen
 
-### 📊 Souveränes Dashboard
-Alle wichtigen Netzwerk- und Marktdaten auf einen Blick. Vom aktuellen Block-Status über Mempool-Gebühren bis hin zum Halving-Countdown. Verfolge den Puls der Timechain in Echtzeit.
+### 📊 Dashboard
+Der Bitcoin-Kurs live in USD oder EUR, mit Kursverlauf über 24 Stunden, 7 Tage, 30 Tage und 1 Jahr. Darunter die aktuellen Netzwerkdaten von mempool.space: Mempool-Gebühr in sat/vB, Hashrate, letzter Block und Anzahl unbestätigter Transaktionen. Die Werte aktualisieren sich automatisch.
 
-### 📈 Fundamentale Indikatoren
-Eine kuratierte Auswahl an relevanten und bewährten Metriken, um die Marktphasen objektiv einzuordnen:
-- **Fear & Greed Index**: Misst die aktuelle Marktstimmung.
-- **Puell Multiple**: Analysiert das Einkommen der Miner.
-- **MVRV Z-Score**: Einordnung der Marktkapitalisierung vs. realisierter Kapitalisierung.
-- **Pi Cycle Top**: Ein historisch treffsicherer Indikator für Marktzyklen.
-  
-### 📰 Ungefiltertes Signal
-Integrierter, kuratierter News-Feed aus dem Herzen der deutschsprachigen Bitcoin-Community (u.a. Blocktrainer). Keine Zeitverschwendung mit irrelevanten Krypto-Ablenkungen, nur reine Bitcoin-Informationen.
+### 📚 Für Einsteiger
+Eine kuratierte Sammlung zum Einstieg: ein Zeitplan zur Bitcoin-Adoption sowie Videos, Artikel und Kanäle, etwa Blocktrainer und der Einundzwanzig Podcast.
+
+### 📈 Indikatoren
+Direkte Links zu bewährten On-Chain- und Zyklus-Charts externer Anbieter, jeweils mit kurzer Erklärung:
+- **Long-Term Holder Realized Price**
+- **Short-Term Holder MVRV**
+- **Bitcoin Power Law**
+- **200-Wochen Moving Average**
+- **NUPL (Net Unrealized Profit/Loss)**
+- **Bitcoin Root-Scale Cycle Chart**
+
+Die Charts werden nicht in der App berechnet, sondern beim jeweiligen Anbieter geöffnet.
+
+### 📰 News
+Der News-Feed von Blocktrainer, direkt in der App. Keine Zeitverschwendung mit irrelevanten Krypto-Ablenkungen, nur Bitcoin-Informationen.
+
+Zuletzt geladene Kurse, Netzwerkdaten und News werden lokal zwischengespeichert, damit die App beim Start sofort etwas anzeigt.
 
 ---
 
