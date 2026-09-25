@@ -15,7 +15,6 @@
     "@capacitor/app": "^8.1.0",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/core": "^8.3.4",
-    "@capacitor/local-notifications": "^8.2.0",
     "@google/genai": "^1.29.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
