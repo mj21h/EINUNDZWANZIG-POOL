@@ -56,30 +56,52 @@ jobs:
         run: |
           sed -i '/<uses-permission android:name="android.permission.INTERNET" \/>/a \    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" \/>\n    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" \/>\n    <uses-permission android:name="android.permission.USE_EXACT_ALARM" \/>' android/app/src/main/AndroidManifest.xml
 
-      - name: Generate Custom Keystore for Signing
+      - name: Check Signing Secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -alias androiddebugkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass android \
-            -keypass android \
-            -dname "cn=Einundzwanzig, ou=Pool, o=Einundzwanzig, c=DE"
-          cp debug.keystore android/app/debug.keystore
+          missing=""
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              missing="$missing $name"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error title=Signing secrets missing::Missing GitHub Actions secrets:$missing. Release builds must be signed with the fixed release keystore. Add the secrets under Settings > Secrets and variables > Actions (see docs/release-signing.md)."
+            exit 1
+          fi
+
+      - name: Restore Release Keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          keystore="$RUNNER_TEMP/release.keystore"
+          if ! printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"; then
+            echo "::error title=Invalid keystore::ANDROID_KEYSTORE_BASE64 is not valid base64."
+            exit 1
+          fi
+          if ! keytool -list -keystore "$keystore" -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" > /dev/null 2>&1; then
+            echo "::error title=Invalid keystore::Keystore could not be opened with ANDROID_KEYSTORE_PASSWORD or does not contain alias ANDROID_KEY_ALIAS."
+            exit 1
+          fi
+          echo "ANDROID_KEYSTORE_FILE=$keystore" >> "$GITHUB_ENV"
 
       - name: Configure Gradle Signing
         run: |
-          cat <<EOF >> android/app/build.gradle
-          
+          cat <<'EOF' >> android/app/build.gradle
+
           android {
               signingConfigs {
                   release {
-                      storeFile file("debug.keystore")
-                      storePassword "android"
-                      keyAlias "androiddebugkey"
-                      keyPassword "android"
+                      storeFile file(System.getenv("ANDROID_KEYSTORE_FILE"))
+                      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
                   }
               }
               buildTypes {
@@ -91,12 +113,20 @@ jobs:
           EOF
 
       - name: Build and Sign APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           cd android
           chmod +x ./gradlew
           ./gradlew assembleRelease
 
       - name: Build and Sign AAB
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           cd android
           ./gradlew bundleRelease
@@ -113,3 +143,6 @@ jobs:
           name: Standalone-Android-AAB
           path: android/app/build/outputs/bundle/release/*.aab
 
+      - name: Remove Release Keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.keystore"
